@@ -1,0 +1,12 @@
+.env
+.env.local
+*.db
+uploads/
+logs/
+.DS_Store
+.idea/
+*.swp
+*.swo
+*~
+dist/
+build/
