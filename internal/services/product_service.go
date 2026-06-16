@@ -1,0 +1,124 @@
+package services
+
+import (
+	"errors"
+	"fmt"
+	"gocart/internal/models"
+	"gocart/internal/repositories"
+)
+
+type ProductService struct {
+	productRepo  repositories.ProductRepository
+	categoryRepo repositories.CategoryRepository
+}
+
+func NewProductService(productRepo repositories.ProductRepository, categoryRepo repositories.CategoryRepository) *ProductService {
+	return &ProductService{productRepo: productRepo, categoryRepo: categoryRepo}
+}
+
+func (s *ProductService) CreateProduct(req *models.CreateProductRequest) (*models.Product, error) {
+
+	_, err := s.categoryRepo.GetByID(req.CategoryID)
+	if err != nil {
+		return nil, errors.New("invalid category")
+	}
+
+	product := &models.Product{
+		Name:        req.Name,
+		Description: req.Description,
+		Price:       req.Price,
+		Stock:       req.Stock,
+		CategoryID:  req.CategoryID,
+		Sku:         req.Sku,
+		Slug:        req.Slug,
+	}
+
+	if err := s.productRepo.Create(product); err != nil {
+		return nil, fmt.Errorf("failed to create product: %w", err)
+	}
+
+	return s.productRepo.GetByID(product.ID)
+}
+
+func (s *ProductService) GetProduct(id uint) (*models.Product, error) {
+	return s.productRepo.GetByID(id)
+}
+
+func (s *ProductService) GetProducts(query *models.PaginationQuery, filters *models.ProductFilters) (*models.PaginatedResponse, error) {
+
+	if query == nil {
+		query = &models.PaginationQuery{
+			Page:     1,
+			PageSize: 10,
+			Sort:     "created_at",
+			Order:    "desc",
+		}
+	}
+
+	if query.Page < 1 {
+		query.Page = 1
+	}
+
+	if query.PageSize < 1 {
+		query.PageSize = 10
+	}
+
+	products, total, err := s.productRepo.GetAll(query, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch products: %w", err)
+	}
+
+	totalPages := int(total) / query.PageSize
+	if int(total)%query.PageSize > 0 {
+		totalPages++
+	}
+
+	return &models.PaginatedResponse{
+		Data:      products,
+		Total:     total,
+		Page:      query.Page,
+		PageSize:  query.PageSize,
+		TotalPage: totalPages,
+	}, nil
+}
+
+func (s *ProductService) UpdateProduct(id uint, req *models.UpdateProductRequest) (*models.Product, error) {
+	product, err := s.productRepo.GetByID(id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Name != nil {
+		product.Name = *req.Name
+	}
+	if req.Description != nil {
+		product.Description = *req.Description
+	}
+	if req.Price != nil {
+		product.Price = *req.Price
+	}
+	if req.Stock != nil {
+		product.Stock = *req.Stock
+	}
+	if req.Sku != nil {
+		product.Sku = *req.Sku
+	}
+	if req.Slug != nil {
+		product.Slug = *req.Slug
+	}
+
+	if err := s.productRepo.Update((product)); err != nil {
+		return nil, fmt.Errorf("failed to update product: %w", err)
+	}
+
+	return product, nil
+}
+
+func (s *ProductService) DeleteProduct(id uint) error {
+	if err := s.productRepo.Delete(id); err != nil {
+		return fmt.Errorf("failed to delete product: %w", err)
+	}
+
+	return nil
+}
