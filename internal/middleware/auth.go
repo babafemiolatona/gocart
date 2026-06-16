@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"gocart/internal/services"
@@ -34,7 +35,14 @@ func AuthMiddleware(userService *services.UserService) gin.HandlerFunc {
 			return
 		}
 
-		// c.Set("userID", claims.ID)
+		userID, err := strconv.ParseUint(claims.Subject, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+			c.Abort()
+			return
+		}
+
+		c.Set("userID", uint(userID))
 		// c.Set("userEmail", claims.Email)
 		c.Set("userRole", claims.Role)
 

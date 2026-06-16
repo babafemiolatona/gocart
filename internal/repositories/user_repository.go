@@ -88,6 +88,10 @@ func (r *userRepository) Update(user *models.User) error {
 func (r *userRepository) Delete(id uint) error {
 	result := r.db.Delete(&models.User{}, id)
 
+	if result.Error != nil {
+		return result.Error
+	}
+
 	if result.RowsAffected == 0 {
 		return errors.New("User not found")
 	}
