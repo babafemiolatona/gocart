@@ -55,6 +55,7 @@ func (h *CartHandler) AddToCart(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
 	}
 
 	var req models.AddToCartRequest
@@ -65,8 +66,22 @@ func (h *CartHandler) AddToCart(c *gin.Context) {
 
 	cart, err := h.cartService.AddToCart(userID, &req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		if errors.Is(err, services.ErrProductNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+			return
+
+		} else if errors.Is(err, services.ErrInsufficientStock) {
+			c.JSON(http.StatusConflict, gin.H{"error": "insufficient stock"})
+			return
+
+		} else if errors.Is(err, services.ErrInvalidQuantity) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid quantity"})
+			return
+
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add item to cart"})
+			return
+		}
 	}
 	c.JSON(http.StatusOK, cart)
 }
@@ -93,8 +108,22 @@ func (h *CartHandler) UpdateCartItem(c *gin.Context) {
 
 	cart, err := h.cartService.UpdateCartItem(userID, uint(id), req.Quantity)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		if errors.Is(err, services.ErrCartItemNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "cart item not found"})
+			return
+
+		} else if errors.Is(err, services.ErrInsufficientStock) {
+			c.JSON(http.StatusConflict, gin.H{"error": "insufficient stock"})
+			return
+
+		} else if errors.Is(err, services.ErrInvalidQuantity) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid quantity"})
+			return
+
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update cart item"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, cart)
@@ -115,8 +144,14 @@ func (h *CartHandler) RemoveFromCart(c *gin.Context) {
 
 	cart, err := h.cartService.RemoveFromCart(userID, uint(id))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to remove cart item"})
-		return
+		if errors.Is(err, services.ErrCartItemNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "cart item not found"})
+			return
+
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove item from cart"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, cart)

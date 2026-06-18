@@ -56,7 +56,7 @@ func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 	category, err := h.categoryService.GetCategoryByID(uint(id))
 	if err != nil {
 		if errors.Is(err, services.ErrCategoryNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "category not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -83,7 +83,7 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 	category, err := h.categoryService.UpdateCategory(&req, uint(id))
 	if err != nil {
 		if errors.Is(err, services.ErrCategoryNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "category not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -104,7 +104,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 
 	if err := h.categoryService.DeleteCategory(uint(id)); err != nil {
 		if errors.Is(err, services.ErrCategoryNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "category not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
 

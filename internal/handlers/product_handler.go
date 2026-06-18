@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"gorm.io/gorm"
-
 	"gocart/internal/models"
 	"gocart/internal/query"
 	"gocart/internal/services"
@@ -32,6 +30,11 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 
 	product, err := h.productService.CreateProduct(&req)
 	if err != nil {
+		if errors.Is(err, services.ErrCategoryNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -61,8 +64,8 @@ func (h *ProductHandler) GetProduct(c *gin.Context) {
 
 	product, err := h.productService.GetProduct(uint(id))
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+		if errors.Is(err, services.ErrProductNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -88,6 +91,11 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 
 	product, err := h.productService.UpdateProduct(uint(id), &req)
 	if err != nil {
+		if errors.Is(err, services.ErrProductNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update product"})
 		return
 	}
@@ -103,6 +111,11 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 	}
 
 	if err := h.productService.DeleteProduct(uint(id)); err != nil {
+		if errors.Is(err, services.ErrProductNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete product"})
 		return
 	}

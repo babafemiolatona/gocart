@@ -4,6 +4,15 @@ import (
 	"errors"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
+
+	"gorm.io/gorm"
+)
+
+var (
+	// ErrProductNotFound   = errors.New("product not found")
+	ErrInvalidQuantity   = errors.New("invalid quantity")
+	ErrInsufficientStock = errors.New("insufficient stock")
+	ErrCartItemNotFound  = errors.New("cart item not found")
 )
 
 type CartService struct {
@@ -21,7 +30,10 @@ func (s *CartService) GetCart(userID uint) (*models.Cart, error) {
 		return cart, nil
 	}
 
-	// create if not exists
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
 	newCart := &models.Cart{UserID: userID}
 
 	if err := s.cartRepo.Create(newCart); err != nil {
@@ -34,12 +46,12 @@ func (s *CartService) GetCart(userID uint) (*models.Cart, error) {
 func (s *CartService) AddToCart(userID uint, req *models.AddToCartRequest) (*models.Cart, error) {
 
 	if req.Quantity <= 0 {
-		return nil, errors.New("invalid quantity")
+		return nil, ErrInvalidQuantity
 	}
 
 	product, err := s.productRepo.GetByID(req.ProductID)
 	if err != nil {
-		return nil, errors.New("product not found")
+		return nil, ErrProductNotFound
 	}
 
 	cart, err := s.GetCart(userID)
@@ -60,7 +72,7 @@ func (s *CartService) AddToCart(userID uint, req *models.AddToCartRequest) (*mod
 		newQty := existing.Quantity + req.Quantity
 
 		if product.Stock < newQty {
-			return nil, errors.New("insufficient stock")
+			return nil, ErrInsufficientStock
 		}
 
 		existing.Quantity = newQty
@@ -72,7 +84,7 @@ func (s *CartService) AddToCart(userID uint, req *models.AddToCartRequest) (*mod
 
 	} else {
 		if product.Stock < req.Quantity {
-			return nil, errors.New("insufficient stock")
+			return nil, ErrInsufficientStock
 		}
 
 		newItem := &models.CartItem{
@@ -115,7 +127,7 @@ func (s *CartService) recalculateCart(cartID uint, userID uint) (*models.Cart, e
 func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*models.Cart, error) {
 
 	if qty <= 0 {
-		return nil, errors.New("invalid quantity")
+		return nil, ErrInvalidQuantity
 	}
 
 	cart, err := s.GetCart(userID)
@@ -130,11 +142,11 @@ func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*models.Cart
 
 			product, err := s.productRepo.GetByID(item.ProductID)
 			if err != nil {
-				return nil, errors.New("product not found")
+				return nil, ErrProductNotFound
 			}
 
 			if product.Stock < qty {
-				return nil, errors.New("insufficient stock")
+				return nil, ErrInsufficientStock
 			}
 
 			item.Quantity = qty
@@ -147,7 +159,7 @@ func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*models.Cart
 		}
 	}
 
-	return nil, errors.New("cart item not found")
+	return nil, ErrCartItemNotFound
 }
 
 func (s *CartService) RemoveFromCart(userID, itemID uint) (*models.Cart, error) {
@@ -157,7 +169,20 @@ func (s *CartService) RemoveFromCart(userID, itemID uint) (*models.Cart, error) 
 		return nil, err
 	}
 
-	if err := s.cartRepo.RemoveItem(cart.ID); err != nil {
+	found := false
+
+	for _, item := range cart.Items {
+		if item.ID == itemID {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil, ErrCartItemNotFound
+	}
+
+	if err := s.cartRepo.RemoveItem(itemID); err != nil {
 		return nil, err
 	}
 

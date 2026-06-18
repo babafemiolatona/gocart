@@ -52,6 +52,9 @@ func (s *CategoryService) UpdateCategory(req *models.CategoryRequest, id uint) (
 	category, err := s.categoryRepo.GetByID(id)
 
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrCategoryNotFound
+		}
 		return nil, err
 	}
 
@@ -75,5 +78,12 @@ func (s *CategoryService) UpdateCategory(req *models.CategoryRequest, id uint) (
 }
 
 func (s *CategoryService) DeleteCategory(id uint) error {
-	return s.categoryRepo.Delete(id)
+	if err := s.categoryRepo.Delete(id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrCategoryNotFound
+		}
+		return err
+	}
+
+	return nil
 }

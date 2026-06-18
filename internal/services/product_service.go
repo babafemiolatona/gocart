@@ -7,6 +7,11 @@ import (
 	"gocart/internal/repositories"
 )
 
+var (
+	ErrProductNotFound = errors.New("product not found")
+	// ErrCategoryNotFound = errors.New("invalid category")
+)
+
 type ProductService struct {
 	productRepo  repositories.ProductRepository
 	categoryRepo repositories.CategoryRepository
@@ -20,7 +25,7 @@ func (s *ProductService) CreateProduct(req *models.CreateProductRequest) (*model
 
 	_, err := s.categoryRepo.GetByID(req.CategoryID)
 	if err != nil {
-		return nil, errors.New("invalid category")
+		return nil, ErrCategoryNotFound
 	}
 
 	product := &models.Product{
@@ -41,7 +46,12 @@ func (s *ProductService) CreateProduct(req *models.CreateProductRequest) (*model
 }
 
 func (s *ProductService) GetProduct(id uint) (*models.Product, error) {
-	return s.productRepo.GetByID(id)
+	product, err := s.productRepo.GetByID(id)
+	if err != nil {
+		return nil, ErrProductNotFound
+	}
+
+	return product, nil
 }
 
 func (s *ProductService) GetProducts(query *models.PaginationQuery, filters *models.ProductFilters) (*models.PaginatedResponse, error) {
@@ -86,7 +96,7 @@ func (s *ProductService) UpdateProduct(id uint, req *models.UpdateProductRequest
 	product, err := s.productRepo.GetByID(id)
 
 	if err != nil {
-		return nil, err
+		return nil, ErrProductNotFound
 	}
 
 	if req.Name != nil {
@@ -117,7 +127,7 @@ func (s *ProductService) UpdateProduct(id uint, req *models.UpdateProductRequest
 
 func (s *ProductService) DeleteProduct(id uint) error {
 	if err := s.productRepo.Delete(id); err != nil {
-		return fmt.Errorf("failed to delete product: %w", err)
+		return ErrProductNotFound
 	}
 
 	return nil
