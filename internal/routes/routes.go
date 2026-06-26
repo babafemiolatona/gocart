@@ -36,6 +36,10 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, userService *services.UserServ
 		cartService := services.NewCartService(cartRepo, productRepo)
 		cartHandler := handlers.NewCartHandler(cartService)
 
+		orderRepo := repositories.NewOrderRepository(db)
+		orderService := services.NewOrderService(orderRepo, cartRepo, productRepo)
+		orderHandler := handlers.NewOrderHandler(orderService)
+
 		public := v1.Group("")
 		{
 			products := public.Group("/products")
@@ -80,6 +84,14 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, userService *services.UserServ
 				cart.PUT("/items/:itemID", cartHandler.UpdateCartItem)
 				cart.DELETE("/items/:itemID", cartHandler.RemoveFromCart)
 				cart.DELETE("", cartHandler.ClearCart)
+			}
+
+			orders := protected.Group("/orders")
+			{
+				orders.POST("/checkout", orderHandler.Checkout)
+				orders.GET("/:id", orderHandler.GetOrder)
+				orders.GET("", orderHandler.GetMyOrders)
+				orders.PUT("/:id/cancel", orderHandler.CancelOrder)
 			}
 		}
 	}
