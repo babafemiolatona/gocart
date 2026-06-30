@@ -45,6 +45,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 	resp, err := h.userService.Login(&req)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, resp)

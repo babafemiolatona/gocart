@@ -6,6 +6,7 @@ import (
 	"gocart/internal/config"
 	"gocart/internal/repositories"
 	"gocart/internal/routes"
+	"gocart/internal/seed"
 	"gocart/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +24,11 @@ func main() {
 
 	// Create service layer
 	userRepo := repositories.NewUserRepository(db)
+
+	if err := seed.SeedAdmin(userRepo); err != nil {
+		log.Fatalf("failed to seed admin: %v", err)
+	}
+
 	userService := services.NewUserService(userRepo, config.CFG)
 
 	// Set Gin mode

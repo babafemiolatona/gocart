@@ -47,7 +47,8 @@ func (s *UserService) Register(req *models.RegisterRequest) (*models.User, error
 		Email:     req.Email,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
-		Role:      models.RoleUser, // Default to user role
+		Username:  req.Username,
+		Role:      models.RoleCustomer, // Default to customer role
 	}
 
 	if err := user.HashPassword(req.Password); err != nil {
@@ -74,7 +75,7 @@ func (s *UserService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 
 	token, expiresAt, err := s.GenerateToken(user)
 	if err != nil {
-		return nil, errors.New("failed to generate token")
+		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
 	return &models.AuthResponse{
@@ -86,7 +87,7 @@ func (s *UserService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 type CustomClaims struct {
 	// ID    uint   `json:"id"`
 	// Email string `json:"email"`
-	Role string `json:"role"`
+	Role models.Role `json:"role"`
 	jwt.RegisteredClaims
 }
 

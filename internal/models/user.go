@@ -8,17 +8,18 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Role constants
+type Role string
+
 const (
-	RoleUser  = "user"
-	RoleAdmin = "admin"
+	RoleCustomer Role = "customer"
+	RoleAdmin    Role = "admin"
 )
 
 type User struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	Username  string    `gorm:"unique;not null" json:"username"`
 	Email     string    `gorm:"unique;not null" json:"email"`
-	Role      string    `gorm:"not null" json:"role"`
+	Role      Role      `gorm:"not null" json:"role"`
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Password  string    `gorm:"not null" json:"-"`
@@ -28,6 +29,7 @@ type User struct {
 
 type RegisterRequest struct {
 	Email           string `json:"email" binding:"required,email"`
+	Username        string `json:"username" binding:"required"`
 	Password        string `json:"password" binding:"required,min=6"`
 	ConfirmPassword string `json:"confirm_password" binding:"required"`
 	FirstName       string `json:"first_name" binding:"required"`
@@ -92,7 +94,6 @@ func (r *RegisterRequest) Validate() error {
 	return nil
 }
 
-// IsValidRole checks if a role is valid
-func IsValidRole(role string) bool {
-	return role == RoleUser || role == RoleAdmin
+func IsValidRole(role Role) bool {
+	return role == RoleCustomer || role == RoleAdmin
 }

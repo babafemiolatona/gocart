@@ -3,6 +3,7 @@ package routes
 import (
 	"gocart/internal/handlers"
 	"gocart/internal/middleware"
+	"gocart/internal/models"
 	"gocart/internal/repositories"
 	"gocart/internal/services"
 
@@ -17,29 +18,34 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, userService *services.UserServ
 	{
 		userHandler := handlers.NewUserHandler(userService)
 
+		// Authentication
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/register", userHandler.Register)
 			auth.POST("/login", userHandler.Login)
 		}
 
+		// Repositories
 		productRepo := repositories.NewProductRepository(db)
 		categoryRepo := repositories.NewCategoryRepository(db)
+		cartRepo := repositories.NewCartRepository(db)
+		orderRepo := repositories.NewOrderRepository(db)
 
+		// Services
 		productService := services.NewProductService(productRepo, categoryRepo)
 		categoryService := services.NewCategoryService(categoryRepo)
+		cartService := services.NewCartService(cartRepo, productRepo)
+		orderService := services.NewOrderService(orderRepo, cartRepo, productRepo)
 
+		// Handlers
 		productHandler := handlers.NewProductHandler(productService)
 		categoryHandler := handlers.NewCategoryHandler(categoryService)
-
-		cartRepo := repositories.NewCartRepository(db)
-		cartService := services.NewCartService(cartRepo, productRepo)
 		cartHandler := handlers.NewCartHandler(cartService)
-
-		orderRepo := repositories.NewOrderRepository(db)
-		orderService := services.NewOrderService(orderRepo, cartRepo, productRepo)
 		orderHandler := handlers.NewOrderHandler(orderService)
 
+		// -----------------------
+		// Public Routes
+		// -----------------------
 		public := v1.Group("")
 		{
 			products := public.Group("/products")
@@ -55,26 +61,15 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, userService *services.UserServ
 			}
 		}
 
+		// -----------------------
+		// Authenticated User Routes
+		// -----------------------
 		protected := v1.Group("")
 		protected.Use(middleware.AuthMiddleware(userService))
 		{
 			users := protected.Group("/users")
 			{
 				users.GET("/profile", userHandler.GetProfile)
-			}
-
-			products := protected.Group("/products")
-			{
-				products.POST("", productHandler.CreateProduct)
-				products.PUT("/:id", productHandler.UpdateProduct)
-				products.DELETE("/:id", productHandler.DeleteProduct)
-			}
-
-			categories := protected.Group("/categories")
-			{
-				categories.POST("", categoryHandler.CreateCategory)
-				categories.PUT("/:id", categoryHandler.UpdateCategory)
-				categories.DELETE("/:id", categoryHandler.DeleteCategory)
 			}
 
 			cart := protected.Group("/cart")
@@ -89,9 +84,33 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, userService *services.UserServ
 			orders := protected.Group("/orders")
 			{
 				orders.POST("/checkout", orderHandler.Checkout)
-				orders.GET("/:id", orderHandler.GetOrder)
 				orders.GET("", orderHandler.GetMyOrders)
+				orders.GET("/:id", orderHandler.GetOrder)
 				orders.PUT("/:id/cancel", orderHandler.CancelOrder)
+			}
+		}
+
+		// -----------------------
+		// Admin Routes
+		// -----------------------
+		admin := v1.Group("/admin")
+		admin.Use(
+			middleware.AuthMiddleware(userService),
+			middleware.RequireRole(models.RoleAdmin),
+		)
+		{
+			products := admin.Group("/products")
+			{
+				products.POST("", productHandler.CreateProduct)
+				products.PUT("/:id", productHandler.UpdateProduct)
+				products.DELETE("/:id", productHandler.DeleteProduct)
+			}
+
+			categories := admin.Group("/categories")
+			{
+				categories.POST("", categoryHandler.CreateCategory)
+				categories.PUT("/:id", categoryHandler.UpdateCategory)
+				categories.DELETE("/:id", categoryHandler.DeleteCategory)
 			}
 		}
 	}
