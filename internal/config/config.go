@@ -36,6 +36,13 @@ type Config struct {
 	UploadDir     string
 	MaxUploadSize int64
 
+	// MinIO
+	MinioEndpoint  string
+	MinioAccessKey string
+	MinioSecretKey string
+	MinioBucket    string
+	MinioUseSSL    bool
+
 	AllowedOrigins []string
 	TrustedProxies []string
 }
@@ -69,6 +76,13 @@ func loadEnv() {
 		AllowedOrigins:   parseCommaSeparated(getEnv("ALLOWED_ORIGINS")),
 		UploadDir:        getEnvOptional("UPLOAD_DIR", "./uploads"),
 		MaxUploadSize:    int64(getEnvInt("MAX_UPLOAD_SIZE")),
+
+		// MinIO
+		MinioEndpoint:  getEnv("MINIO_ENDPOINT"),
+		MinioAccessKey: getEnv("MINIO_ACCESS_KEY"),
+		MinioSecretKey: getEnv("MINIO_SECRET_KEY"),
+		MinioBucket:    getEnv("MINIO_BUCKET"),
+		MinioUseSSL:    getEnvOptional("MINIO_USE_SSL", "false") == "true",
 	}
 
 	tokenDurationMinutes, err := strconv.Atoi(getEnvOptional("TOKEN_DURATION_MINUTES", "60"))

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 
@@ -23,12 +24,19 @@ func NewProductHandler(productService *services.ProductService) *ProductHandler 
 func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	var req models.CreateProductRequest
 
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	product, err := h.productService.CreateProduct(&req)
+	var images []*multipart.FileHeader
+
+	form, err := c.MultipartForm()
+	if err == nil {
+		images = form.File["images"]
+	}
+
+	product, err := h.productService.CreateProduct(&req, images)
 	if err != nil {
 		if errors.Is(err, services.ErrCategoryNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})

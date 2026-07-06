@@ -8,6 +8,7 @@ import (
 	"gocart/internal/routes"
 	"gocart/internal/seed"
 	"gocart/internal/services"
+	"gocart/internal/storage"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,6 +21,23 @@ func main() {
 	db, err := repositories.InitDB(config.CFG)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
+	}
+
+	log.Printf("Endpoint: %q", config.CFG.MinioEndpoint)
+	log.Printf("AccessKey: %q", config.CFG.MinioAccessKey)
+	log.Printf("Bucket: %q", config.CFG.MinioBucket)
+	log.Printf("UseSSL: %v", config.CFG.MinioUseSSL)
+
+	// Initialize MinIO
+	minioStorage, err := storage.NewMinioStorage(
+		config.CFG.MinioEndpoint,
+		config.CFG.MinioAccessKey,
+		config.CFG.MinioSecretKey,
+		config.CFG.MinioBucket,
+		config.CFG.MinioUseSSL,
+	)
+	if err != nil {
+		log.Fatalf("Failed to initialize MinIO: %v", err)
 	}
 
 	// Create service layer
@@ -40,7 +58,7 @@ func main() {
 	router := gin.Default()
 
 	// Setup routes
-	routes.SetupRoutes(router, db, userService)
+	routes.SetupRoutes(router, db, userService, minioStorage)
 
 	// Start server
 	log.Printf("Starting server on %s", config.CFG.ServerPort)

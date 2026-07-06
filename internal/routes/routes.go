@@ -6,12 +6,18 @@ import (
 	"gocart/internal/models"
 	"gocart/internal/repositories"
 	"gocart/internal/services"
+	"gocart/internal/storage"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-func SetupRoutes(router *gin.Engine, db *gorm.DB, userService *services.UserService) {
+func SetupRoutes(
+	router *gin.Engine,
+	db *gorm.DB,
+	userService *services.UserService,
+	storage storage.Storage,
+) {
 	router.GET("/health", handlers.HealthCheck)
 
 	v1 := router.Group("/api/v1")
@@ -30,9 +36,10 @@ func SetupRoutes(router *gin.Engine, db *gorm.DB, userService *services.UserServ
 		categoryRepo := repositories.NewCategoryRepository(db)
 		cartRepo := repositories.NewCartRepository(db)
 		orderRepo := repositories.NewOrderRepository(db)
+		productImageRepo := repositories.NewProductImageRepository(db)
 
 		// Services
-		productService := services.NewProductService(productRepo, categoryRepo)
+		productService := services.NewProductService(productRepo, categoryRepo, productImageRepo, storage)
 		categoryService := services.NewCategoryService(categoryRepo)
 		cartService := services.NewCartService(cartRepo, productRepo)
 		orderService := services.NewOrderService(orderRepo, cartRepo, productRepo)

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
+	"gocart/internal/storage"
+	"mime/multipart"
 )
 
 var (
@@ -13,15 +15,30 @@ var (
 )
 
 type ProductService struct {
-	productRepo  repositories.ProductRepository
-	categoryRepo repositories.CategoryRepository
+	productRepo      repositories.ProductRepository
+	categoryRepo     repositories.CategoryRepository
+	productImageRepo repositories.ProductImageRepository
+	storage          storage.Storage
 }
 
-func NewProductService(productRepo repositories.ProductRepository, categoryRepo repositories.CategoryRepository) *ProductService {
-	return &ProductService{productRepo: productRepo, categoryRepo: categoryRepo}
+func NewProductService(
+	productRepo repositories.ProductRepository,
+	categoryRepo repositories.CategoryRepository,
+	productImageRepo repositories.ProductImageRepository,
+	storage storage.Storage,
+) *ProductService {
+	return &ProductService{
+		productRepo:      productRepo,
+		categoryRepo:     categoryRepo,
+		productImageRepo: productImageRepo,
+		storage:          storage,
+	}
 }
 
-func (s *ProductService) CreateProduct(req *models.CreateProductRequest) (*models.Product, error) {
+func (s *ProductService) CreateProduct(
+	req *models.CreateProductRequest,
+	images []*multipart.FileHeader,
+) (*models.Product, error) {
 
 	_, err := s.categoryRepo.GetByID(req.CategoryID)
 	if err != nil {
@@ -42,7 +59,54 @@ func (s *ProductService) CreateProduct(req *models.CreateProductRequest) (*model
 		return nil, fmt.Errorf("failed to create product: %w", err)
 	}
 
+	if len(images) == 0 {
+		if err := s.uploadImages(product.ID, images); err != nil {
+			return nil, err
+		}
+	}
+
 	return s.productRepo.GetByID(product.ID)
+}
+
+func (s *ProductService) uploadImages(
+	productID uint,
+	images []*multipart.FileHeader,
+) error {
+
+	productImages := make([]models.ProductImage, 0, len(images))
+
+	for _, image := range images {
+
+		file, err := image.Open()
+		if err != nil {
+			return fmt.Errorf("failed to open image: %w", err)
+		}
+
+		objectName, err := s.storage.UploadProductImage(
+			file,
+			image,
+			productID,
+		)
+		if err != nil {
+			file.Close()
+			return fmt.Errorf("failed to upload image: %w", err)
+		}
+
+		file.Close()
+
+		productImages = append(productImages, models.ProductImage{
+			ProductID: productID,
+			ImageURL:  objectName,
+		})
+	}
+
+	if len(productImages) > 0 {
+		if err := s.productImageRepo.CreateMany(productImages); err != nil {
+			return fmt.Errorf("failed to save product images: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (s *ProductService) GetProduct(id uint) (*models.Product, error) {
