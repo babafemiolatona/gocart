@@ -59,7 +59,7 @@ func (s *ProductService) CreateProduct(
 		return nil, fmt.Errorf("failed to create product: %w", err)
 	}
 
-	if len(images) == 0 {
+	if len(images) > 0 {
 		if err := s.uploadImages(product.ID, images); err != nil {
 			return nil, err
 		}
