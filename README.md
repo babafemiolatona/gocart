@@ -50,3 +50,26 @@ Gocart is a backend **REST API** for an e-commerce platform built with **Go**, *
 - **MinIO** for image storage
 - **Zerolog** for time formatting configuration
 - **Docker** and **Docker Compose**
+
+## Architecture
+
+Gocart follows a layered backend structure:
+
+```mermaid
+flowchart TD
+    Client[Client / Frontend / API consumer] --> Router[Gin router]
+    Router --> Handlers[HTTP handlers]
+    Handlers --> Services[Services]
+    Services --> Repositories[Database repositories]
+    Services --> Storage[MinIO storage]
+    Repositories --> Postgres[(PostgreSQL)]
+    Storage --> MinIO[(MinIO)]
+```
+
+### Layer Responsibilities
+
+- Handlers parse requests and return HTTP responses.
+- Services contain business logic such as validation, cart totals, stock checks, and checkout flow.
+- Repositories encapsulate database queries and persistence.
+- Storage handles image upload and object deletion in MinIO.
+- Middleware enforces authentication and role-based access control.
