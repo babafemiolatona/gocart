@@ -137,3 +137,54 @@ TOKEN_DURATION_MINUTES=60
 TRUSTED_PROXY_IPS=
 REDIS_URL=
 ```
+
+## Local Development
+
+### 1. Start PostgreSQL and MinIO
+
+The repository includes a `docker-compose.yml` file that starts PostgreSQL, MinIO, and the API container.
+
+### 2. Run the API locally
+
+If you prefer to run the API directly on your machine:
+
+```bash
+go run ./cmd/api
+```
+
+The server starts on the configured port and auto-migrates these tables:
+
+- **users**
+- **categories**
+- **products**
+- **product_images**
+- **carts**
+- **cart_items**
+- **orders**
+- **order_items**
+
+### 3. Build a local binary
+
+```bash
+go build -o gocart ./cmd/api
+```
+
+## Docker
+
+### Build the image
+
+```bash
+docker build -t gocart .
+```
+
+### Run the stack
+
+```bash
+docker compose up --build
+```
+
+The compose file currently starts:
+
+- `app` on port `8080`
+- `postgres` on port `5432`
+- `minio` on ports `9000` and `9001`
