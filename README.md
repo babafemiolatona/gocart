@@ -73,3 +73,67 @@ flowchart TD
 - Repositories encapsulate database queries and persistence.
 - Storage handles image upload and object deletion in MinIO.
 - Middleware enforces authentication and role-based access control.
+
+## Requirements
+
+- **Go 1.25** or newer
+- **PostgreSQL 17** or compatible
+- **MinIO**
+- **Docker** and **Docker Compose** for containerized setup
+
+## Configuration
+
+The application loads environment variables from a local `.env` file unless `GO_MODE=release` is set. The minimum runtime configuration currently used by the codebase is:
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `SERVER_PORT` | Yes | Port number without the leading colon. The app listens on `:SERVER_PORT`. |
+| `ENV` | Yes | Use `production` to switch Gin to release mode. |
+| `DB_HOST` | Yes | PostgreSQL host. |
+| `DB_PORT` | Yes | PostgreSQL port. |
+| `DB_USER` | Yes | Database user. |
+| `DB_PASSWORD` | Yes | Database password. |
+| `DB_NAME` | Yes | Database name. |
+| `DB_SSL_MODE` | Yes | Passed into the PostgreSQL DSN. |
+| `JWT_SECRET` | Yes | Signing key for JWT tokens. |
+| `JWT_EXPIRY` | Yes | Duration string such as `24h` or `168h`. |
+| `ALLOWED_ORIGINS` | Yes | Comma-separated list used for configuration loading. |
+| `MINIO_ENDPOINT` | Yes | MinIO endpoint, for example `localhost:9000`. |
+| `MINIO_ACCESS_KEY` | Yes | MinIO access key. |
+| `MINIO_SECRET_KEY` | Yes | MinIO secret key. |
+| `MINIO_BUCKET` | Yes | Bucket name used for product images. |
+| `MINIO_USE_SSL` | No | Defaults to `false`. |
+| `UPLOAD_DIR` | No | Defaults to `./uploads`. |
+| `MAX_UPLOAD_SIZE` | Yes | Parsed as an integer. |
+| `TOKEN_DURATION_MINUTES` | No | Defaults to `60`. |
+| `TRUSTED_PROXY_IPS` | No | Comma-separated proxy IP list. |
+| `REDIS_URL` | Loaded | Present in config, but not currently wired into runtime logic. |
+
+### Example `.env`
+
+```env
+SERVER_PORT=8080
+ENV=development
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=gocart
+DB_SSL_MODE=disable
+
+JWT_SECRET=change-me-in-production
+JWT_EXPIRY=24h
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=gocart
+MINIO_USE_SSL=false
+
+MAX_UPLOAD_SIZE=10485760
+TOKEN_DURATION_MINUTES=60
+TRUSTED_PROXY_IPS=
+REDIS_URL=
+```
