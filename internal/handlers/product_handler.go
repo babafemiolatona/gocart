@@ -92,12 +92,19 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	}
 
 	var req models.UpdateProductRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	product, err := h.productService.UpdateProduct(uint(id), &req)
+	var images []*multipart.FileHeader
+
+	form, err := c.MultipartForm()
+	if err == nil {
+		images = form.File["images"]
+	}
+
+	product, err := h.productService.UpdateProduct(uint(id), &req, images)
 	if err != nil {
 		if errors.Is(err, services.ErrProductNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})

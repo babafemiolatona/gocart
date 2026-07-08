@@ -156,7 +156,11 @@ func (s *ProductService) GetProducts(query *models.PaginationQuery, filters *mod
 	}, nil
 }
 
-func (s *ProductService) UpdateProduct(id uint, req *models.UpdateProductRequest) (*models.Product, error) {
+func (s *ProductService) UpdateProduct(
+	id uint,
+	req *models.UpdateProductRequest,
+	images []*multipart.FileHeader,
+) (*models.Product, error) {
 	product, err := s.productRepo.GetByID(id)
 
 	if err != nil {
@@ -184,6 +188,12 @@ func (s *ProductService) UpdateProduct(id uint, req *models.UpdateProductRequest
 
 	if err := s.productRepo.Update((product)); err != nil {
 		return nil, fmt.Errorf("failed to update product: %w", err)
+	}
+
+	if len(images) > 0 {
+		if err := s.uploadImages(product.ID, images); err != nil {
+			return nil, fmt.Errorf("failed to upload images: %w", err)
+		}
 	}
 
 	return product, nil

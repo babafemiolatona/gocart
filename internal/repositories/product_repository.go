@@ -33,7 +33,10 @@ func (r *productRepository) Create(product *models.Product) error {
 func (r *productRepository) GetByID(id uint) (*models.Product, error) {
 	product := &models.Product{}
 
-	if err := r.db.Preload("Category").First(product, id).Error; err != nil {
+	if err := r.db.
+		Preload("Category").
+		Preload("Images").
+		First(product, id).Error; err != nil {
 		return nil, err
 	}
 	return product, nil
