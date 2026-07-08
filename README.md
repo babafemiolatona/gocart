@@ -39,3 +39,14 @@ Gocart is a backend **REST API** for an e-commerce platform built with **Go**, *
 - Upload one or more **product images** with product create and update requests.
 - Store image objects in **MinIO** under a product-scoped path.
 
+## Tech Stack
+
+- **Go 1.25**
+- **Gin** for **HTTP routing** and **middleware**
+- **GORM** for **database access** and **schema migration**
+- **PostgreSQL** as the primary database
+- **JWT** for authentication
+- **bcrypt** for password hashing
+- **MinIO** for image storage
+- **Zerolog** for time formatting configuration
+- **Docker** and **Docker Compose**
