@@ -255,6 +255,6 @@ Admin routes require both a valid JWT and the `admin` role.
 - `search`
 - `in_stock=true`
 
-The list response is paginated and includes the data set, total item count, current page, page size, and total pages.
+The list **response** is paginated and includes the **data set**, **total item count**, **current page**, **page size**, and **total pages**.
 
-Product create and update use multipart form data. Send product fields as form values and attach images under the `images` field.
+Product create and update use **multipart form data**. Send product fields as form values and attach images under the `images` field.
