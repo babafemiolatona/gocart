@@ -290,3 +290,78 @@ Example request:
 The list **response** is paginated and includes the **data set**, **total item count**, **current page**, **page size**, and **total pages**.
 
 Product create and update use **multipart form data**. Send product fields as form values and attach images under the `images` field.
+
+## Error Handling
+
+The API returns JSON error payloads and uses standard HTTP status codes for common failures:
+
+- `400 Bad Request` for invalid input
+- `401 Unauthorized` for missing or invalid authentication
+- `403 Forbidden` for insufficient role permissions
+- `404 Not Found` when a resource does not exist
+- `409 Conflict` for stock-related cart conflicts
+- `500 Internal Server Error` for unexpected failures
+
+## Security Notes
+
+- Passwords are hashed with bcrypt before being stored.
+- JWTs are signed with HS256.
+- Admin access is enforced by role middleware.
+- Product and cart flows check inventory before accepting changes.
+
+## Useful cURL Examples
+
+### Register
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "email":"customer@example.com",
+    "username":"customer1",
+    "password":"secret123",
+    "confirm_password":"secret123",
+    "first_name":"Chris",
+    "last_name":"Taylor"
+  }'
+```
+
+### Login
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "username_or_email":"customer@example.com",
+    "password":"secret123"
+  }'
+```
+
+### List Products
+
+```bash
+curl 'http://localhost:8080/api/v1/products?page=1&page_size=10&sort=price&order=asc&search=laptop'
+```
+
+### Add to Cart
+
+```bash
+curl -X POST http://localhost:8080/api/v1/cart/items \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "product_id": 1,
+    "quantity": 2
+  }'
+```
+
+### Checkout
+
+```bash
+curl -X POST http://localhost:8080/api/v1/orders/checkout \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "shipping_address": "123 Broad Street, Lagos"
+  }'
+```
