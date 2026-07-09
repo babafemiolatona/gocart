@@ -238,3 +238,23 @@ Admin routes require both a valid JWT and the `admin` role.
 - `POST /api/v1/admin/categories`
 - `PUT /api/v1/admin/categories/:id`
 - `DELETE /api/v1/admin/categories/:id`
+
+## Endpoint Details
+
+### Products
+
+`GET /api/v1/products` supports these query parameters:
+
+- `page` default `1`
+- `page_size` default `10`, max `100`
+- `sort` default `created_at`
+- `order` `asc` or `desc`, default `desc`
+- `category_id`
+- `min_price`
+- `max_price`
+- `search`
+- `in_stock=true`
+
+The list response is paginated and includes the data set, total item count, current page, page size, and total pages.
+
+Product create and update use multipart form data. Send product fields as form values and attach images under the `images` field.
