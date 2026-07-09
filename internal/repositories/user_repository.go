@@ -10,6 +10,7 @@ import (
 type UserRepository interface {
 	Create(user *models.User) error
 	GetByEmail(email string) (*models.User, error)
+	GetByEmailOrUsername(identifier string) (*models.User, error)
 	GetByID(id uint) (*models.User, error)
 	ExistsByEmail(email string) (bool, error)
 	Update(user *models.User) error
@@ -40,6 +41,21 @@ func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 		}
 		return nil, result.Error
 	}
+	return user, nil
+}
+
+func (r *userRepository) GetByEmailOrUsername(identifier string) (*models.User, error) {
+	user := &models.User{}
+
+	if result := r.db.
+		Where("LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)", identifier, identifier).
+		First(user); result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, result.Error
+	}
+
 	return user, nil
 }
 

@@ -241,6 +241,38 @@ Admin routes require both a valid JWT and the `admin` role.
 
 ## Endpoint Details
 
+### Authentication
+
+#### Register
+
+`POST /api/v1/auth/register`
+
+Example request:
+
+```json
+{
+  "email": "customer@example.com",
+  "username": "customer1",
+  "password": "secret123",
+  "confirm_password": "secret123",
+  "first_name": "Chris",
+  "last_name": "Taylor"
+}
+```
+
+#### Login
+
+`POST /api/v1/auth/login`
+
+Example request:
+
+```json
+{
+  "username_or_email": "customer@example.com",
+  "password": "secret123"
+}
+```
+
 ### Products
 
 `GET /api/v1/products` supports these query parameters:

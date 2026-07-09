@@ -37,8 +37,8 @@ type RegisterRequest struct {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
+	UsernameOrEmail string `json:"username_or_email" binding:"required"`
+	Password        string `json:"password" binding:"required"`
 }
 
 type AuthResponse struct {

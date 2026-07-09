@@ -63,14 +63,15 @@ func (s *UserService) Register(req *models.RegisterRequest) (*models.User, error
 }
 
 func (s *UserService) Login(req *models.LoginRequest) (*models.AuthResponse, error) {
+	identifier := strings.ToLower(strings.TrimSpace(req.UsernameOrEmail))
 
-	user, err := s.userRepo.GetByEmail(req.Email)
+	user, err := s.userRepo.GetByEmailOrUsername(identifier)
 	if err != nil {
-		return nil, errors.New("invalid email or password")
+		return nil, errors.New("invalid credentials")
 	}
 
 	if !user.VerifyPassword(req.Password) {
-		return nil, errors.New("invalid email or password")
+		return nil, errors.New("invalid credentials")
 	}
 
 	token, expiresAt, err := s.GenerateToken(user)
