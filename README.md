@@ -188,3 +188,53 @@ The compose file currently starts:
 - `app` on port `8080`
 - `postgres` on port `5432`
 - `minio` on ports `9000` and `9001`
+
+## Default Admin Account
+
+On startup, the app seeds an admin user if one does not already exist:
+
+- Email: `admin@gocart.com`
+- Username: `admin`
+- Password: `admin123`
+
+This is useful for local development and should be changed before any production use.
+
+## API Overview
+
+### Auth
+
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+
+### Public Catalog
+
+- `GET /api/v1/products`
+- `GET /api/v1/products/:id`
+- `GET /api/v1/categories`
+- `GET /api/v1/categories/:id`
+
+### Authenticated User Routes
+
+All routes below require `Authorization: Bearer <token>`.
+
+- `GET /api/v1/users/profile`
+- `GET /api/v1/cart`
+- `POST /api/v1/cart/items`
+- `PUT /api/v1/cart/items/:itemID`
+- `DELETE /api/v1/cart/items/:itemID`
+- `DELETE /api/v1/cart`
+- `POST /api/v1/orders/checkout`
+- `GET /api/v1/orders`
+- `GET /api/v1/orders/:id`
+- `PUT /api/v1/orders/:id/cancel`
+
+### Admin Routes
+
+Admin routes require both a valid JWT and the `admin` role.
+
+- `POST /api/v1/admin/products`
+- `PUT /api/v1/admin/products/:id`
+- `DELETE /api/v1/admin/products/:id`
+- `POST /api/v1/admin/categories`
+- `PUT /api/v1/admin/categories/:id`
+- `DELETE /api/v1/admin/categories/:id`
