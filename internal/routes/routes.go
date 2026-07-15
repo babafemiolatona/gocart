@@ -18,6 +18,9 @@ func SetupRoutes(
 	userService *services.UserService,
 	storage storage.Storage,
 ) {
+
+	router.Use(middleware.ErrorHandler())
+
 	router.GET("/health", handlers.HealthCheck)
 
 	v1 := router.Group("/api/v1")

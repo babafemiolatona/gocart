@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	apperrors "gocart/internal/errors"
 	"gocart/internal/models"
 	"gocart/internal/services"
 
@@ -23,13 +24,18 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 
 	var req models.CategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"validation_error",
+			err.Error(),
+			err,
+		))
 		return
 	}
 
 	category, err := h.categoryService.CreateCategory(&req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create category"})
+		c.Error(err)
 		return
 	}
 
@@ -39,7 +45,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 func (h *CategoryHandler) GetCategories(c *gin.Context) {
 	categories, err := h.categoryService.GetAllCategories()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch categories"})
+		c.Error(err)
 		return
 	}
 
@@ -49,19 +55,21 @@ func (h *CategoryHandler) GetCategories(c *gin.Context) {
 func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category id"})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_category_id",
+			"invalid category id",
+			err,
+		))
 		return
 	}
 
 	category, err := h.categoryService.GetCategoryByID(uint(id))
 	if err != nil {
 		if errors.Is(err, services.ErrCategoryNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.Error(err)
 			return
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch category"})
-		return
 	}
 
 	c.JSON(http.StatusOK, category)
@@ -70,24 +78,29 @@ func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category id"})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_category_id",
+			"invalid category id",
+			err,
+		))
 		return
 	}
 
 	var req models.CategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"validation_error",
+			err.Error(),
+			err,
+		))
 		return
 	}
 
 	category, err := h.categoryService.UpdateCategory(&req, uint(id))
 	if err != nil {
-		if errors.Is(err, services.ErrCategoryNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update category"})
+		c.Error(err)
 		return
 	}
 
@@ -98,17 +111,17 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category id"})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_category_id",
+			"invalid category id",
+			err,
+		))
 		return
 	}
 
 	if err := h.categoryService.DeleteCategory(uint(id)); err != nil {
-		if errors.Is(err, services.ErrCategoryNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete category"})
+		c.Error(err)
 		return
 	}
 
