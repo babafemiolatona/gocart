@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"errors"
 	"mime/multipart"
 	"net/http"
 	"strconv"
 
+	apperrors "gocart/internal/errors"
 	"gocart/internal/models"
 	"gocart/internal/query"
 	"gocart/internal/services"
@@ -25,7 +25,12 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	var req models.CreateProductRequest
 
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"validation_error",
+			err.Error(),
+			err,
+		))
 		return
 	}
 
@@ -38,12 +43,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 
 	product, err := h.productService.CreateProduct(&req, images)
 	if err != nil {
-		if errors.Is(err, services.ErrCategoryNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -56,7 +56,7 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 
 	resp, err := h.productService.GetProducts(q, f)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to fetch products"})
+		c.Error(err)
 		return
 	}
 
@@ -66,18 +66,18 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 func (h *ProductHandler) GetProduct(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_product_id",
+			"invalid product id",
+			err,
+		))
 		return
 	}
 
 	product, err := h.productService.GetProduct(uint(id))
 	if err != nil {
-		if errors.Is(err, services.ErrProductNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch product"})
+		c.Error(err)
 		return
 	}
 
@@ -87,13 +87,23 @@ func (h *ProductHandler) GetProduct(c *gin.Context) {
 func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_product_id",
+			"invalid product id",
+			err,
+		))
 		return
 	}
 
 	var req models.UpdateProductRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"validation_error",
+			err.Error(),
+			err,
+		))
 		return
 	}
 
@@ -106,12 +116,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 
 	product, err := h.productService.UpdateProduct(uint(id), &req, images)
 	if err != nil {
-		if errors.Is(err, services.ErrProductNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update product"})
+		c.Error(err)
 		return
 	}
 
@@ -121,17 +126,17 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_product_id",
+			"invalid product id",
+			err,
+		))
 		return
 	}
 
 	if err := h.productService.DeleteProduct(uint(id)); err != nil {
-		if errors.Is(err, services.ErrProductNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete product"})
+		c.Error(err)
 		return
 	}
 

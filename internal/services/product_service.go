@@ -3,15 +3,15 @@ package services
 import (
 	"errors"
 	"fmt"
+	apperrors "gocart/internal/errors"
+	"net/http"
+
 	"gocart/internal/models"
 	"gocart/internal/repositories"
 	"gocart/internal/storage"
 	"mime/multipart"
-)
 
-var (
-	ErrProductNotFound = errors.New("product not found")
-	// ErrCategoryNotFound = errors.New("invalid category")
+	"gorm.io/gorm"
 )
 
 type ProductService struct {
@@ -42,7 +42,21 @@ func (s *ProductService) CreateProduct(
 
 	_, err := s.categoryRepo.GetByID(req.CategoryID)
 	if err != nil {
-		return nil, ErrCategoryNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(
+				http.StatusNotFound,
+				"category_not_found",
+				"category not found",
+				err,
+			)
+		}
+
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_category_failed",
+			"failed to fetch category",
+			err,
+		)
 	}
 
 	product := &models.Product{
@@ -56,7 +70,21 @@ func (s *ProductService) CreateProduct(
 	}
 
 	if err := s.productRepo.Create(product); err != nil {
-		return nil, fmt.Errorf("failed to create product: %w", err)
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, apperrors.New(
+				http.StatusConflict,
+				"product_exists",
+				"product already exists",
+				err,
+			)
+		}
+
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"create_product_failed",
+			"failed to create product",
+			err,
+		)
 	}
 
 	if len(images) > 0 {
@@ -112,7 +140,21 @@ func (s *ProductService) uploadImages(
 func (s *ProductService) GetProduct(id uint) (*models.Product, error) {
 	product, err := s.productRepo.GetByID(id)
 	if err != nil {
-		return nil, ErrProductNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(
+				http.StatusNotFound,
+				"product_not_found",
+				"product not found",
+				err,
+			)
+		}
+
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_product_failed",
+			"failed to fetch product",
+			err,
+		)
 	}
 
 	return product, nil
@@ -139,7 +181,12 @@ func (s *ProductService) GetProducts(query *models.PaginationQuery, filters *mod
 
 	products, total, err := s.productRepo.GetAll(query, filters)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch products: %w", err)
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_products_failed",
+			"failed to fetch products",
+			err,
+		)
 	}
 
 	totalPages := int(total) / query.PageSize
@@ -162,9 +209,22 @@ func (s *ProductService) UpdateProduct(
 	images []*multipart.FileHeader,
 ) (*models.Product, error) {
 	product, err := s.productRepo.GetByID(id)
-
 	if err != nil {
-		return nil, ErrProductNotFound
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(
+				http.StatusNotFound,
+				"product_not_found",
+				"product not found",
+				err,
+			)
+		}
+
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_product_failed",
+			"failed to fetch product",
+			err,
+		)
 	}
 
 	if req.Name != nil {
@@ -186,13 +246,32 @@ func (s *ProductService) UpdateProduct(
 		product.Slug = *req.Slug
 	}
 
-	if err := s.productRepo.Update((product)); err != nil {
-		return nil, fmt.Errorf("failed to update product: %w", err)
+	if err := s.productRepo.Update(product); err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, apperrors.New(
+				http.StatusConflict,
+				"product_exists",
+				"product already exists",
+				err,
+			)
+		}
+
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"update_product_failed",
+			"failed to update product",
+			err,
+		)
 	}
 
 	if len(images) > 0 {
 		if err := s.uploadImages(product.ID, images); err != nil {
-			return nil, fmt.Errorf("failed to upload images: %w", err)
+			return nil, apperrors.New(
+				http.StatusInternalServerError,
+				"upload_product_images_failed",
+				"failed to upload product images",
+				err,
+			)
 		}
 	}
 
@@ -201,8 +280,21 @@ func (s *ProductService) UpdateProduct(
 
 func (s *ProductService) DeleteProduct(id uint) error {
 	if err := s.productRepo.Delete(id); err != nil {
-		return ErrProductNotFound
-	}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return apperrors.New(
+				http.StatusNotFound,
+				"product_not_found",
+				"product not found",
+				err,
+			)
+		}
 
+		return apperrors.New(
+			http.StatusInternalServerError,
+			"delete_product_failed",
+			"failed to delete product",
+			err,
+		)
+	}
 	return nil
 }

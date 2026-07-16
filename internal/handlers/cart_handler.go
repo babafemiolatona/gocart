@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	apperrors "gocart/internal/errors"
 	"gocart/internal/models"
 	"gocart/internal/services"
 	"net/http"
@@ -37,13 +38,18 @@ func (h *CartHandler) GetCart(c *gin.Context) {
 	userID, err := getUserID(c)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.Error(apperrors.New(
+			http.StatusUnauthorized,
+			"unauthorized",
+			"unauthorized access",
+			err,
+		))
 		return
 	}
 
 	cart, err := h.cartService.GetCart(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch cart"})
+		c.Error(err)
 		return
 	}
 
@@ -54,35 +60,32 @@ func (h *CartHandler) AddToCart(c *gin.Context) {
 	userID, err := getUserID(c)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.Error(apperrors.New(
+			http.StatusUnauthorized,
+			"unauthorized",
+			"unauthorized access",
+			err,
+		))
 		return
 	}
 
 	var req models.AddToCartRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"validation_error",
+			err.Error(),
+			err,
+		))
 		return
 	}
 
 	cart, err := h.cartService.AddToCart(userID, &req)
 	if err != nil {
-		if errors.Is(err, services.ErrProductNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
-			return
-
-		} else if errors.Is(err, services.ErrInsufficientStock) {
-			c.JSON(http.StatusConflict, gin.H{"error": "insufficient stock"})
-			return
-
-		} else if errors.Is(err, services.ErrInvalidQuantity) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid quantity"})
-			return
-
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add item to cart"})
-			return
-		}
+		c.Error(err)
+		return
 	}
+
 	c.JSON(http.StatusOK, cart)
 }
 
@@ -90,40 +93,41 @@ func (h *CartHandler) UpdateCartItem(c *gin.Context) {
 	userID, err := getUserID(c)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.Error(apperrors.New(
+			http.StatusUnauthorized,
+			"unauthorized",
+			"unauthorized access",
+			err,
+		))
 		return
 	}
 
 	id, err := strconv.ParseUint(c.Param("itemID"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cart item id"})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_cart_item_id",
+			"invalid cart item id",
+			err,
+		))
 		return
 	}
 
 	var req models.UpdateCartItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"validation_error",
+			err.Error(),
+			err,
+		))
 		return
 	}
 
 	cart, err := h.cartService.UpdateCartItem(userID, uint(id), req.Quantity)
 	if err != nil {
-		if errors.Is(err, services.ErrCartItemNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "cart item not found"})
-			return
-
-		} else if errors.Is(err, services.ErrInsufficientStock) {
-			c.JSON(http.StatusConflict, gin.H{"error": "insufficient stock"})
-			return
-
-		} else if errors.Is(err, services.ErrInvalidQuantity) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid quantity"})
-			return
-
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update cart item"})
-			return
-		}
+		c.Error(err)
+		return
 	}
 
 	c.JSON(http.StatusOK, cart)
@@ -132,26 +136,30 @@ func (h *CartHandler) UpdateCartItem(c *gin.Context) {
 func (h *CartHandler) RemoveFromCart(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.Error(apperrors.New(
+			http.StatusUnauthorized,
+			"unauthorized",
+			"unauthorized access",
+			err,
+		))
 		return
 	}
 
 	id, err := strconv.ParseUint(c.Param("itemID"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cart item id"})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_cart_item_id",
+			"invalid cart item id",
+			err,
+		))
 		return
 	}
 
 	cart, err := h.cartService.RemoveFromCart(userID, uint(id))
 	if err != nil {
-		if errors.Is(err, services.ErrCartItemNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "cart item not found"})
-			return
-
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove item from cart"})
-			return
-		}
+		c.Error(err)
+		return
 	}
 
 	c.JSON(http.StatusOK, cart)
@@ -160,12 +168,17 @@ func (h *CartHandler) RemoveFromCart(c *gin.Context) {
 func (h *CartHandler) ClearCart(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.Error(apperrors.New(
+			http.StatusUnauthorized,
+			"unauthorized",
+			"unauthorized access",
+			err,
+		))
 		return
 	}
 
 	if err := h.cartService.ClearCart(userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to clear cart"})
+		c.Error(err)
 		return
 	}
 

@@ -78,6 +78,10 @@ func (r *cartRepository) RemoveItem(cartItemID uint) error {
 		return result.Error
 	}
 
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
 	return nil
 }
 
