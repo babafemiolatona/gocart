@@ -16,3 +16,9 @@ type CategoryRequest struct {
 	Description string `json:"description"`
 	Slug        string `json:"slug" binding:"required"`
 }
+
+type UpdateCategoryRequest struct {
+	Name        *string `json:"name" binding:"omitempty,min=3"`
+	Description *string `json:"description"`
+	Slug        *string `json:"slug"`
+}

@@ -87,7 +87,7 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	var req models.CategoryRequest
+	var req models.UpdateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(apperrors.New(
 			http.StatusBadRequest,

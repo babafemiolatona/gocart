@@ -13,7 +13,7 @@ import (
 func SeedAdmin(userRepo repositories.UserRepository) error {
 	_, err := userRepo.GetByEmail("admin@gocart.com")
 	if err == nil {
-		log.Println("Admin user already exits, skipping seeding")
+		log.Println("Admin user already exists, skipping seeding")
 		return nil
 	}
 

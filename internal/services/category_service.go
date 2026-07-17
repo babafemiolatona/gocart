@@ -84,7 +84,7 @@ func (s *CategoryService) GetAllCategories() ([]models.Category, error) {
 	return categories, nil
 }
 
-func (s *CategoryService) UpdateCategory(req *models.CategoryRequest, id uint) (*models.Category, error) {
+func (s *CategoryService) UpdateCategory(req *models.UpdateCategoryRequest, id uint) (*models.Category, error) {
 	category, err := s.categoryRepo.GetByID(id)
 	if err != nil {
 
@@ -105,16 +105,16 @@ func (s *CategoryService) UpdateCategory(req *models.CategoryRequest, id uint) (
 		)
 	}
 
-	if req.Name != "" {
-		category.Name = req.Name
+	if req.Name != nil {
+		category.Name = *req.Name
 	}
 
-	if req.Description != "" {
-		category.Description = req.Description
+	if req.Description != nil {
+		category.Description = *req.Description
 	}
 
-	if req.Slug != "" {
-		category.Slug = req.Slug
+	if req.Slug != nil {
+		category.Slug = *req.Slug
 	}
 
 	if err := s.categoryRepo.Update(category); err != nil {
