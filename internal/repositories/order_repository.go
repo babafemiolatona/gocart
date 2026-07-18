@@ -8,9 +8,11 @@ import (
 
 type OrderRepository interface {
 	CreateOrder(order *models.Order) error
+	CreateOrderTx(tx *gorm.DB, order *models.Order) error
 	GetOrderByID(id uint) (*models.Order, error)
 	GetOrdersByUserID(userID uint) ([]models.Order, error)
 	UpdateOrderStatus(orderID uint, status models.OrderStatus) error
+	WithTransaction(fn func(tx *gorm.DB) error) error
 }
 
 type orderRepository struct {
@@ -23,6 +25,10 @@ func NewOrderRepository(db *gorm.DB) OrderRepository {
 
 func (r *orderRepository) CreateOrder(order *models.Order) error {
 	return r.db.Create(order).Error
+}
+
+func (r *orderRepository) CreateOrderTx(tx *gorm.DB, order *models.Order) error {
+	return tx.Create(order).Error
 }
 
 func (r *orderRepository) GetOrderByID(id uint) (*models.Order, error) {
@@ -70,4 +76,10 @@ func (r *orderRepository) UpdateOrderStatus(orderID uint, status models.OrderSta
 	}
 
 	return nil
+}
+
+func (r *orderRepository) WithTransaction(fn func(tx *gorm.DB) error) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		return fn(tx)
+	})
 }

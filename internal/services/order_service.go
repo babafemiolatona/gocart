@@ -61,11 +61,7 @@ func (s *OrderService) ValidateCart(cart *models.Cart) error {
 	return nil
 }
 
-func (s *OrderService) ProcessCheckout(
-	userID uint,
-	shippingAddress string,
-) (*models.Order, error) {
-
+func (s *OrderService) ProcessCheckout(userID uint, shippingAddress string) (*models.Order, error) {
 	cart, err := s.cartRepo.GetWithItems(userID)
 	if err != nil {
 		return nil, apperrors.New(
@@ -105,64 +101,73 @@ func (s *OrderService) ProcessCheckout(
 		})
 	}
 
-	if err := s.orderRepo.CreateOrder(order); err != nil {
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"create_order_failed",
-			"failed to create order",
-			err,
-		)
-	}
+	err = s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
 
-	for _, item := range cart.Items {
+		if err := s.orderRepo.CreateOrderTx(tx, order); err != nil {
+			return apperrors.New(
+				http.StatusInternalServerError,
+				"create_order_failed",
+				"failed to create order",
+				err,
+			)
+		}
 
-		product, err := s.productRepo.GetByID(item.ProductID)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, apperrors.New(
-					http.StatusNotFound,
-					"product_not_found",
-					"product not found",
+		for _, item := range cart.Items {
+
+			product, err := s.productRepo.GetByIDTx(tx, item.ProductID)
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return apperrors.New(
+						http.StatusNotFound,
+						"product_not_found",
+						"product not found",
+						err,
+					)
+				}
+
+				return apperrors.New(
+					http.StatusInternalServerError,
+					"fetch_product_failed",
+					"failed to fetch product",
 					err,
 				)
 			}
 
-			return nil, apperrors.New(
+			if product.Stock < item.Quantity {
+				return apperrors.New(
+					http.StatusConflict,
+					"insufficient_stock",
+					"insufficient stock",
+					nil,
+				)
+			}
+
+			product.Stock -= item.Quantity
+
+			if err := s.productRepo.UpdateTx(tx, product); err != nil {
+				return apperrors.New(
+					http.StatusInternalServerError,
+					"update_product_failed",
+					"failed to update product",
+					err,
+				)
+			}
+		}
+
+		if err := s.cartRepo.ClearCartTx(tx, cart.ID); err != nil {
+			return apperrors.New(
 				http.StatusInternalServerError,
-				"fetch_product_failed",
-				"failed to fetch product",
+				"clear_cart_failed",
+				"failed to clear cart",
 				err,
 			)
 		}
 
-		if product.Stock < item.Quantity {
-			return nil, apperrors.New(
-				http.StatusConflict,
-				"insufficient_stock",
-				"insufficient stock",
-				nil,
-			)
-		}
+		return nil
+	})
 
-		product.Stock -= item.Quantity
-
-		if err := s.productRepo.Update(product); err != nil {
-			return nil, apperrors.New(
-				http.StatusInternalServerError,
-				"update_product_failed",
-				"failed to update product",
-				err,
-			)
-		}
-	}
-
-	if err := s.cartRepo.ClearCart(cart.ID); err != nil {
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"clear_cart_failed",
-			"failed to clear cart",
-			err,
-		)
+	if err != nil {
+		return nil, err
 	}
 
 	return order, nil

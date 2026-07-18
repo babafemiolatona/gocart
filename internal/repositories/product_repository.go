@@ -9,10 +9,12 @@ import (
 type ProductRepository interface {
 	Create(product *models.Product) error
 	GetByID(id uint) (*models.Product, error)
+	GetByIDTx(tx *gorm.DB, id uint) (*models.Product, error)
 	GetAll(query *models.PaginationQuery, filters *models.ProductFilters) ([]models.Product, int64, error)
 	Update(product *models.Product) error
 	Delete(id uint) error
 	GetBySku(sku string) (*models.Product, error)
+	UpdateTx(tx *gorm.DB, product *models.Product) error
 }
 
 type productRepository struct {
@@ -21,6 +23,12 @@ type productRepository struct {
 
 func NewProductRepository(db *gorm.DB) ProductRepository {
 	return &productRepository{db: db}
+}
+
+func (r *productRepository) UpdateTx(tx *gorm.DB, product *models.Product) error {
+	return tx.Model(&models.Product{}).
+		Where("id = ?", product.ID).
+		Updates(product).Error
 }
 
 func (r *productRepository) Create(product *models.Product) error {
@@ -39,6 +47,19 @@ func (r *productRepository) GetByID(id uint) (*models.Product, error) {
 		First(product, id).Error; err != nil {
 		return nil, err
 	}
+	return product, nil
+}
+
+func (r *productRepository) GetByIDTx(tx *gorm.DB, id uint) (*models.Product, error) {
+	product := &models.Product{}
+
+	if err := tx.
+		Preload("Category").
+		Preload("Images").
+		First(product, id).Error; err != nil {
+		return nil, err
+	}
+
 	return product, nil
 }
 
