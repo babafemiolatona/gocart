@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"errors"
+	apperrors "gocart/internal/errors"
+	"gocart/internal/models"
 	"gocart/internal/services"
 	"net/http"
 	"strconv"
@@ -34,22 +36,29 @@ func getUserId(c *gin.Context) (uint, error) {
 func (h *OrderHandler) Checkout(c *gin.Context) {
 	userID, err := getUserId(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
+		c.Error(apperrors.New(
+			http.StatusUnauthorized,
+			"unauthorized",
+			"unauthorized",
+			err,
+		))
 	}
 
-	var req struct {
-		ShippingAddress string `json:"shipping_address"`
-	}
+	var req models.CheckoutRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"validation_error",
+			err.Error(),
+			err,
+		))
 		return
 	}
 
 	order, err := h.orderService.ProcessCheckout(userID, req.ShippingAddress)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -59,13 +68,18 @@ func (h *OrderHandler) Checkout(c *gin.Context) {
 func (h *OrderHandler) GetMyOrders(c *gin.Context) {
 	userID, err := getUserId(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.Error(apperrors.New(
+			http.StatusUnauthorized,
+			"unauthorized",
+			"unauthorized",
+			err,
+		))
 		return
 	}
 
 	orders, err := h.orderService.GetUserOrders(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch orders"})
+		c.Error(err)
 		return
 	}
 
@@ -75,13 +89,18 @@ func (h *OrderHandler) GetMyOrders(c *gin.Context) {
 func (h *OrderHandler) GetOrder(c *gin.Context) {
 	orderID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order id"})
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_order_id",
+			"invalid order id",
+			err,
+		))
 		return
 	}
 
 	order, err := h.orderService.GetOrder(uint(orderID))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+		c.Error(err)
 		return
 	}
 
@@ -92,13 +111,17 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 
 	orderID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order id"})
-		return
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_order_id",
+			"invalid order id",
+			err,
+		))
 	}
 
 	err = h.orderService.CancelOrder(uint(orderID))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 

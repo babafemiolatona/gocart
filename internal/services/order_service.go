@@ -2,9 +2,12 @@ package services
 
 import (
 	"errors"
-	"fmt"
+	apperrors "gocart/internal/errors"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
+	"net/http"
+
+	"gorm.io/gorm"
 )
 
 type OrderService struct {
@@ -29,24 +32,57 @@ func (s *OrderService) ValidateCart(cart *models.Cart) error {
 	for _, item := range cart.Items {
 		product, err := s.productRepo.GetByID(item.ProductID)
 		if err != nil {
-			return fmt.Errorf("product not found: %w", err)
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return apperrors.New(
+					http.StatusNotFound,
+					"product_not_found",
+					"product not found",
+					err,
+				)
+			}
+
+			return apperrors.New(
+				http.StatusInternalServerError,
+				"fetch_product_failed",
+				"failed to fetch product",
+				err,
+			)
 		}
 
 		if product.Stock < item.Quantity {
-			return fmt.Errorf("Insufficient stock for product %d", product.ID)
+			return apperrors.New(
+				http.StatusBadRequest,
+				"insufficient_stock",
+				"insufficient stock",
+				nil,
+			)
 		}
 	}
 	return nil
 }
 
-func (s *OrderService) ProcessCheckout(userID uint, shippingAddress string) (*models.Order, error) {
+func (s *OrderService) ProcessCheckout(
+	userID uint,
+	shippingAddress string,
+) (*models.Order, error) {
+
 	cart, err := s.cartRepo.GetWithItems(userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch cart: %w", err)
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_cart_failed",
+			"failed to fetch cart",
+			err,
+		)
 	}
 
 	if len(cart.Items) == 0 {
-		return nil, errors.New("cart is empty")
+		return nil, apperrors.New(
+			http.StatusBadRequest,
+			"cart_empty",
+			"cart is empty",
+			nil,
+		)
 	}
 
 	if err := s.ValidateCart(cart); err != nil {
@@ -61,40 +97,72 @@ func (s *OrderService) ProcessCheckout(userID uint, shippingAddress string) (*mo
 	}
 
 	for _, item := range cart.Items {
-		orderItem := models.OrderItem{
+		order.Items = append(order.Items, models.OrderItem{
 			ProductID:   item.ProductID,
 			ProductName: item.Product.Name,
 			Price:       item.Price,
 			Quantity:    item.Quantity,
-		}
-
-		order.Items = append(order.Items, orderItem)
+		})
 	}
 
 	if err := s.orderRepo.CreateOrder(order); err != nil {
-		return nil, fmt.Errorf("failed to create order: %w", err)
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"create_order_failed",
+			"failed to create order",
+			err,
+		)
 	}
 
 	for _, item := range cart.Items {
 
 		product, err := s.productRepo.GetByID(item.ProductID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch product %d: %w", item.ProductID, err)
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, apperrors.New(
+					http.StatusNotFound,
+					"product_not_found",
+					"product not found",
+					err,
+				)
+			}
+
+			return nil, apperrors.New(
+				http.StatusInternalServerError,
+				"fetch_product_failed",
+				"failed to fetch product",
+				err,
+			)
 		}
 
 		if product.Stock < item.Quantity {
-			return nil, fmt.Errorf("insufficient stock for product %d", product.ID)
+			return nil, apperrors.New(
+				http.StatusConflict,
+				"insufficient_stock",
+				"insufficient stock",
+				nil,
+			)
 		}
 
 		product.Stock -= item.Quantity
 
 		if err := s.productRepo.Update(product); err != nil {
-			return nil, fmt.Errorf("failed to update stock for product %d: %w", product.ID, err)
+			return nil, apperrors.New(
+				http.StatusInternalServerError,
+				"update_product_failed",
+				"failed to update product",
+				err,
+			)
 		}
 	}
 
 	if err := s.cartRepo.ClearCart(cart.ID); err != nil {
-		return nil, fmt.Errorf("order created but failed to clear cart: %w", err)
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"clear_cart_failed",
+			"failed to clear cart",
+			err,
+		)
 	}
 
 	return order, nil
@@ -103,7 +171,12 @@ func (s *OrderService) ProcessCheckout(userID uint, shippingAddress string) (*mo
 func (s *OrderService) GetUserOrders(userID uint) ([]models.OrderResponse, error) {
 	orders, err := s.orderRepo.GetOrdersByUserID(userID)
 	if err != nil {
-		return nil, err
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_orders_failed",
+			"failed to fetch orders",
+			err,
+		)
 	}
 
 	response := make([]models.OrderResponse, len(orders))
@@ -124,7 +197,12 @@ func (s *OrderService) GetUserOrders(userID uint) ([]models.OrderResponse, error
 func (s *OrderService) GetOrder(orderID uint) (*models.OrderDetailsResponse, error) {
 	order, err := s.orderRepo.GetOrderByID(orderID)
 	if err != nil {
-		return nil, err
+		return nil, apperrors.New(
+			http.StatusNotFound,
+			"order_not_found",
+			"order not found",
+			err,
+		)
 	}
 
 	response := &models.OrderDetailsResponse{
@@ -140,5 +218,25 @@ func (s *OrderService) GetOrder(orderID uint) (*models.OrderDetailsResponse, err
 }
 
 func (s *OrderService) CancelOrder(orderID uint) error {
-	return s.orderRepo.UpdateOrderStatus(orderID, models.OrderStatusCancelled)
+	err := s.orderRepo.UpdateOrderStatus(orderID, models.OrderStatusCancelled)
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return apperrors.New(
+				http.StatusNotFound,
+				"order_not_found",
+				"order not found",
+				err,
+			)
+		}
+
+		return apperrors.New(
+			http.StatusInternalServerError,
+			"cancel_order_failed",
+			"failed to cancel order",
+			err,
+		)
+	}
+
+	return nil
 }
