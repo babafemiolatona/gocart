@@ -10,8 +10,10 @@ type OrderRepository interface {
 	CreateOrder(order *models.Order) error
 	CreateOrderTx(tx *gorm.DB, order *models.Order) error
 	GetOrderByID(id uint) (*models.Order, error)
+	GetOrderByIDTx(tx *gorm.DB, id uint) (*models.Order, error)
 	GetOrdersByUserID(userID uint) ([]models.Order, error)
 	UpdateOrderStatus(orderID uint, status models.OrderStatus) error
+	UpdateOrderStatusTx(tx *gorm.DB, orderID uint, status models.OrderStatus) error
 	WithTransaction(fn func(tx *gorm.DB) error) error
 }
 
@@ -45,6 +47,20 @@ func (r *orderRepository) GetOrderByID(id uint) (*models.Order, error) {
 	return &order, nil
 }
 
+func (r *orderRepository) GetOrderByIDTx(tx *gorm.DB, id uint) (*models.Order, error) {
+	var order models.Order
+
+	err := tx.
+		Preload("Items").
+		First(&order, id).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &order, nil
+}
+
 func (r *orderRepository) GetOrdersByUserID(userID uint) ([]models.Order, error) {
 
 	var orders []models.Order
@@ -63,6 +79,23 @@ func (r *orderRepository) GetOrdersByUserID(userID uint) ([]models.Order, error)
 
 func (r *orderRepository) UpdateOrderStatus(orderID uint, status models.OrderStatus) error {
 	result := r.db.
+		Model(&models.Order{}).
+		Where("id = ?", orderID).
+		Update("status", status)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
+}
+
+func (r *orderRepository) UpdateOrderStatusTx(tx *gorm.DB, orderID uint, status models.OrderStatus) error {
+	result := tx.
 		Model(&models.Order{}).
 		Where("id = ?", orderID).
 		Update("status", status)

@@ -27,31 +27,64 @@ func SetupRoutes(
 	{
 		userHandler := handlers.NewUserHandler(userService)
 
+		// -----------------------
 		// Authentication
+		// -----------------------
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/register", userHandler.Register)
 			auth.POST("/login", userHandler.Login)
 		}
 
+		// -----------------------
 		// Repositories
+		// -----------------------
 		productRepo := repositories.NewProductRepository(db)
 		categoryRepo := repositories.NewCategoryRepository(db)
 		cartRepo := repositories.NewCartRepository(db)
 		orderRepo := repositories.NewOrderRepository(db)
 		productImageRepo := repositories.NewProductImageRepository(db)
+		paymentRepo := repositories.NewPaymentRepository(db)
 
+		// -----------------------
 		// Services
-		productService := services.NewProductService(productRepo, categoryRepo, productImageRepo, storage)
-		categoryService := services.NewCategoryService(categoryRepo)
-		cartService := services.NewCartService(cartRepo, productRepo)
-		orderService := services.NewOrderService(orderRepo, cartRepo, productRepo)
+		// -----------------------
+		productService := services.NewProductService(
+			productRepo,
+			categoryRepo,
+			productImageRepo,
+			storage,
+		)
 
+		categoryService := services.NewCategoryService(categoryRepo)
+
+		cartService := services.NewCartService(
+			cartRepo,
+			productRepo,
+		)
+
+		orderService := services.NewOrderService(
+			orderRepo,
+			cartRepo,
+			productRepo,
+			paymentRepo,
+		)
+
+		paymentService := services.NewPaymentService(
+			paymentRepo,
+			orderRepo,
+			cartRepo,
+			productRepo,
+		)
+
+		// -----------------------
 		// Handlers
+		// -----------------------
 		productHandler := handlers.NewProductHandler(productService)
 		categoryHandler := handlers.NewCategoryHandler(categoryService)
 		cartHandler := handlers.NewCartHandler(cartService)
 		orderHandler := handlers.NewOrderHandler(orderService)
+		paymentHandler := handlers.NewPaymentHandler(paymentService)
 
 		// -----------------------
 		// Public Routes
@@ -97,6 +130,12 @@ func SetupRoutes(
 				orders.GET("", orderHandler.GetMyOrders)
 				orders.GET("/:id", orderHandler.GetOrder)
 				orders.PUT("/:id/cancel", orderHandler.CancelOrder)
+			}
+
+			payments := protected.Group("/payments")
+			{
+				payments.POST("/:reference/process", paymentHandler.ProcessPayment)
+				payments.GET("/:reference", paymentHandler.GetPayment)
 			}
 		}
 

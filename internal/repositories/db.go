@@ -33,6 +33,7 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 		&models.Order{},
 		&models.OrderItem{},
 		&models.ProductImage{},
+		&models.Payment{},
 	); err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}

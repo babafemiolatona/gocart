@@ -7,6 +7,7 @@ import (
 	"gocart/internal/repositories"
 	"net/http"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -14,17 +15,20 @@ type OrderService struct {
 	orderRepo   repositories.OrderRepository
 	cartRepo    repositories.CartRepository
 	productRepo repositories.ProductRepository
+	paymentRepo repositories.PaymentRepository
 }
 
 func NewOrderService(
 	orderRepo repositories.OrderRepository,
 	cartRepo repositories.CartRepository,
 	productRepo repositories.ProductRepository,
+	paymentRepo repositories.PaymentRepository,
 ) *OrderService {
 	return &OrderService{
 		orderRepo:   orderRepo,
 		cartRepo:    cartRepo,
 		productRepo: productRepo,
+		paymentRepo: paymentRepo,
 	}
 }
 
@@ -61,7 +65,11 @@ func (s *OrderService) ValidateCart(cart *models.Cart) error {
 	return nil
 }
 
-func (s *OrderService) ProcessCheckout(userID uint, shippingAddress string) (*models.Order, error) {
+func (s *OrderService) ProcessCheckout(
+	userID uint,
+	shippingAddress string,
+) (*models.CheckoutResponse, error) {
+
 	cart, err := s.cartRepo.GetWithItems(userID)
 	if err != nil {
 		return nil, apperrors.New(
@@ -87,7 +95,7 @@ func (s *OrderService) ProcessCheckout(userID uint, shippingAddress string) (*mo
 
 	order := &models.Order{
 		UserID:          userID,
-		Status:          models.OrderStatusPending,
+		Status:          models.OrderStatusPendingPayment,
 		Total:           cart.Total,
 		ShippingAddress: shippingAddress,
 	}
@@ -101,6 +109,8 @@ func (s *OrderService) ProcessCheckout(userID uint, shippingAddress string) (*mo
 		})
 	}
 
+	var payment *models.Payment
+
 	err = s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
 
 		if err := s.orderRepo.CreateOrderTx(tx, order); err != nil {
@@ -112,53 +122,19 @@ func (s *OrderService) ProcessCheckout(userID uint, shippingAddress string) (*mo
 			)
 		}
 
-		for _, item := range cart.Items {
-
-			product, err := s.productRepo.GetByIDTx(tx, item.ProductID)
-			if err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return apperrors.New(
-						http.StatusNotFound,
-						"product_not_found",
-						"product not found",
-						err,
-					)
-				}
-
-				return apperrors.New(
-					http.StatusInternalServerError,
-					"fetch_product_failed",
-					"failed to fetch product",
-					err,
-				)
-			}
-
-			if product.Stock < item.Quantity {
-				return apperrors.New(
-					http.StatusConflict,
-					"insufficient_stock",
-					"insufficient stock",
-					nil,
-				)
-			}
-
-			product.Stock -= item.Quantity
-
-			if err := s.productRepo.UpdateTx(tx, product); err != nil {
-				return apperrors.New(
-					http.StatusInternalServerError,
-					"update_product_failed",
-					"failed to update product",
-					err,
-				)
-			}
+		payment = &models.Payment{
+			OrderID:   order.ID,
+			Reference: uuid.NewString(),
+			Amount:    order.Total,
+			Status:    models.PaymentStatusPending,
+			Provider:  "mock",
 		}
 
-		if err := s.cartRepo.ClearCartTx(tx, cart.ID); err != nil {
+		if err := s.paymentRepo.CreateTx(tx, payment); err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"clear_cart_failed",
-				"failed to clear cart",
+				"create_payment_failed",
+				"failed to create payment",
 				err,
 			)
 		}
@@ -170,7 +146,10 @@ func (s *OrderService) ProcessCheckout(userID uint, shippingAddress string) (*mo
 		return nil, err
 	}
 
-	return order, nil
+	return &models.CheckoutResponse{
+		Order:   order,
+		Payment: payment,
+	}, nil
 }
 
 func (s *OrderService) GetUserOrders(userID uint) ([]models.OrderResponse, error) {

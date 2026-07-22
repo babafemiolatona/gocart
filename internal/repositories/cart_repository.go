@@ -10,6 +10,7 @@ type CartRepository interface {
 	Create(cart *models.Cart) error
 	GetByUserID(userID uint) (*models.Cart, error)
 	GetWithItems(userID uint) (*models.Cart, error)
+	GetWithItemsTx(tx *gorm.DB, userID uint) (*models.Cart, error)
 	AddItem(item *models.CartItem) error
 	UpdateItem(item *models.CartItem) error
 	RemoveItem(cartItemID uint) error
@@ -42,6 +43,20 @@ func (r *cartRepository) GetWithItems(userID uint) (*models.Cart, error) {
 	var cart models.Cart
 
 	if err := r.db.
+		Preload("Items").
+		Preload("Items.Product").
+		Where("user_id = ?", userID).
+		First(&cart).Error; err != nil {
+		return nil, err
+	}
+
+	return &cart, nil
+}
+
+func (r *cartRepository) GetWithItemsTx(tx *gorm.DB, userID uint) (*models.Cart, error) {
+	var cart models.Cart
+
+	if err := tx.
 		Preload("Items").
 		Preload("Items.Product").
 		Where("user_id = ?", userID).
