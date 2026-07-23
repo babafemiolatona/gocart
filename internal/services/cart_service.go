@@ -4,6 +4,7 @@ import (
 	"errors"
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
+	"gocart/internal/mapper"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
 	"net/http"
@@ -59,7 +60,16 @@ func (s *CartService) GetCart(userID uint) (*models.Cart, error) {
 	return cart, nil
 }
 
-func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*models.Cart, error) {
+func (s *CartService) GetCartResponse(userID uint) (*dto.CartResponse, error) {
+	cart, err := s.GetCart(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return mapper.ToCartResponse(cart), nil
+}
+
+func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.CartResponse, error) {
 
 	if req.Quantity <= 0 {
 		return nil, apperrors.New(
@@ -154,7 +164,12 @@ func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*models
 		}
 	}
 
-	return s.recalculateCart(cart.ID, userID)
+	cart, err = s.recalculateCart(cart.ID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return mapper.ToCartResponse(cart), nil
 }
 
 func (s *CartService) recalculateCart(cartID uint, userID uint) (*models.Cart, error) {
@@ -198,7 +213,7 @@ func (s *CartService) recalculateCart(cartID uint, userID uint) (*models.Cart, e
 	return cart, nil
 }
 
-func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*models.Cart, error) {
+func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*dto.CartResponse, error) {
 
 	if qty <= 0 {
 		return nil, apperrors.New(
@@ -258,7 +273,12 @@ func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*models.Cart
 				)
 			}
 
-			return s.recalculateCart(cart.ID, userID)
+			updatedCart, err := s.recalculateCart(cart.ID, userID)
+			if err != nil {
+				return nil, err
+			}
+
+			return mapper.ToCartResponse(updatedCart), nil
 		}
 	}
 
@@ -270,23 +290,23 @@ func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*models.Cart
 	)
 }
 
-func (s *CartService) RemoveFromCart(userID, itemID uint) (*models.Cart, error) {
+func (s *CartService) RemoveFromCart(userID, itemID uint) (*dto.CartResponse, error) {
 
 	cart, err := s.GetCart(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	found := false
+	var existing *models.CartItem
 
-	for _, item := range cart.Items {
-		if item.ID == itemID {
-			found = true
+	for i := range cart.Items {
+		if cart.Items[i].ID == itemID {
+			existing = &cart.Items[i]
 			break
 		}
 	}
 
-	if !found {
+	if existing == nil {
 		return nil, apperrors.New(
 			http.StatusNotFound,
 			"cart_item_not_found",
@@ -313,7 +333,12 @@ func (s *CartService) RemoveFromCart(userID, itemID uint) (*models.Cart, error) 
 		)
 	}
 
-	return s.recalculateCart(cart.ID, userID)
+	updatedCart, err := s.recalculateCart(cart.ID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return mapper.ToCartResponse(updatedCart), nil
 }
 
 func (s *CartService) ClearCart(userID uint) error {

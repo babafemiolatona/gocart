@@ -47,7 +47,7 @@ func (h *CartHandler) GetCart(c *gin.Context) {
 		return
 	}
 
-	cart, err := h.cartService.GetCart(userID)
+	cart, err := h.cartService.GetCartResponse(userID)
 	if err != nil {
 		c.Error(err)
 		return

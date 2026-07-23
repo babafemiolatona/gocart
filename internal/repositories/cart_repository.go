@@ -45,6 +45,7 @@ func (r *cartRepository) GetWithItems(userID uint) (*models.Cart, error) {
 	if err := r.db.
 		Preload("Items").
 		Preload("Items.Product").
+		Preload("Items.Product.Images").
 		Where("user_id = ?", userID).
 		First(&cart).Error; err != nil {
 		return nil, err
