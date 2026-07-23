@@ -111,13 +111,34 @@ func (r *cartRepository) UpdateCartTotal(cartID uint, total float64, itemCount i
 }
 
 func (r *cartRepository) ClearCart(cartID uint) error {
-	return r.db.Where("cart_id = ?", cartID).
-		Delete(&models.CartItem{}).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+
+		if err := tx.
+			Where("cart_id = ?", cartID).
+			Delete(&models.CartItem{}).Error; err != nil {
+			return err
+		}
+
+		return tx.Model(&models.Cart{}).
+			Where("id = ?", cartID).
+			Updates(map[string]interface{}{
+				"total":      0,
+				"item_count": 0,
+			}).Error
+	})
 }
 
 func (r *cartRepository) ClearCartTx(tx *gorm.DB, cartID uint) error {
-	return tx.
+	if err := tx.
 		Where("cart_id = ?", cartID).
-		Delete(&models.CartItem{}).
-		Error
+		Delete(&models.CartItem{}).Error; err != nil {
+		return err
+	}
+
+	return tx.Model(&models.Cart{}).
+		Where("id = ?", cartID).
+		Updates(map[string]interface{}{
+			"total":      0,
+			"item_count": 0,
+		}).Error
 }
