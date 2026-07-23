@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
-	"gocart/internal/models"
 	"gocart/internal/query"
 	"gocart/internal/services"
 
@@ -22,7 +22,7 @@ func NewProductHandler(productService *services.ProductService) *ProductHandler 
 }
 
 func (h *ProductHandler) CreateProduct(c *gin.Context) {
-	var req models.CreateProductRequest
+	var req dto.CreateProductRequest
 
 	if err := c.ShouldBind(&req); err != nil {
 		c.Error(apperrors.New(
@@ -96,7 +96,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	var req models.UpdateProductRequest
+	var req dto.UpdateProductRequest
 	if err := c.ShouldBind(&req); err != nil {
 		c.Error(apperrors.New(
 			http.StatusBadRequest,

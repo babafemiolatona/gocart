@@ -2,7 +2,9 @@ package services
 
 import (
 	"errors"
+	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
+	"gocart/internal/mapper"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
 	"net/http"
@@ -68,7 +70,7 @@ func (s *OrderService) ValidateCart(cart *models.Cart) error {
 func (s *OrderService) ProcessCheckout(
 	userID uint,
 	shippingAddress string,
-) (*models.CheckoutResponse, error) {
+) (*dto.CheckoutResponse, error) {
 
 	cart, err := s.cartRepo.GetWithItems(userID)
 	if err != nil {
@@ -146,13 +148,13 @@ func (s *OrderService) ProcessCheckout(
 		return nil, err
 	}
 
-	return &models.CheckoutResponse{
-		Order:   order,
-		Payment: payment,
+	return &dto.CheckoutResponse{
+		Order:   mapper.ToOrderCheckoutResponse(order),
+		Payment: mapper.ToPaymentCheckoutResponse(payment),
 	}, nil
 }
 
-func (s *OrderService) GetUserOrders(userID uint) ([]models.OrderResponse, error) {
+func (s *OrderService) GetUserOrders(userID uint) ([]dto.OrderResponse, error) {
 	orders, err := s.orderRepo.GetOrdersByUserID(userID)
 	if err != nil {
 		return nil, apperrors.New(
@@ -163,9 +165,9 @@ func (s *OrderService) GetUserOrders(userID uint) ([]models.OrderResponse, error
 		)
 	}
 
-	response := make([]models.OrderResponse, len(orders))
+	response := make([]dto.OrderResponse, len(orders))
 	for i, order := range orders {
-		response[i] = models.OrderResponse{
+		response[i] = dto.OrderResponse{
 			ID:              order.ID,
 			Status:          string(order.Status),
 			Total:           order.Total,
@@ -178,7 +180,7 @@ func (s *OrderService) GetUserOrders(userID uint) ([]models.OrderResponse, error
 
 }
 
-func (s *OrderService) GetOrder(orderID uint) (*models.OrderDetailsResponse, error) {
+func (s *OrderService) GetOrder(orderID uint) (*dto.OrderDetailsResponse, error) {
 	order, err := s.orderRepo.GetOrderByID(orderID)
 	if err != nil {
 		return nil, apperrors.New(
@@ -189,12 +191,12 @@ func (s *OrderService) GetOrder(orderID uint) (*models.OrderDetailsResponse, err
 		)
 	}
 
-	response := &models.OrderDetailsResponse{
+	response := &dto.OrderDetailsResponse{
 		ID:              order.ID,
 		Status:          string(order.Status),
 		Total:           order.Total,
 		ShippingAddress: order.ShippingAddress,
-		Items:           order.Items,
+		Items:           mapper.ToOrderItemResponses(order.Items),
 		CreatedAt:       order.CreatedAt,
 	}
 

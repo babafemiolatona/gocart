@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
 	"net/http"
 
@@ -36,7 +37,7 @@ func NewProductService(
 }
 
 func (s *ProductService) CreateProduct(
-	req *models.CreateProductRequest,
+	req *dto.CreateProductRequest,
 	images []*multipart.FileHeader,
 ) (*models.Product, error) {
 
@@ -205,7 +206,7 @@ func (s *ProductService) GetProducts(query *models.PaginationQuery, filters *mod
 
 func (s *ProductService) UpdateProduct(
 	id uint,
-	req *models.UpdateProductRequest,
+	req *dto.UpdateProductRequest,
 	images []*multipart.FileHeader,
 ) (*models.Product, error) {
 	product, err := s.productRepo.GetByID(id)

@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"errors"
+	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
-	"gocart/internal/models"
 	"gocart/internal/services"
 	"net/http"
 	"strconv"
@@ -69,7 +69,7 @@ func (h *CartHandler) AddToCart(c *gin.Context) {
 		return
 	}
 
-	var req models.AddToCartRequest
+	var req dto.AddToCartRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(apperrors.New(
 			http.StatusBadRequest,
@@ -113,7 +113,7 @@ func (h *CartHandler) UpdateCartItem(c *gin.Context) {
 		return
 	}
 
-	var req models.UpdateCartItemRequest
+	var req dto.UpdateCartItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(apperrors.New(
 			http.StatusBadRequest,

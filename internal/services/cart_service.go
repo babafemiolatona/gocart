@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
@@ -58,7 +59,7 @@ func (s *CartService) GetCart(userID uint) (*models.Cart, error) {
 	return cart, nil
 }
 
-func (s *CartService) AddToCart(userID uint, req *models.AddToCartRequest) (*models.Cart, error) {
+func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*models.Cart, error) {
 
 	if req.Quantity <= 0 {
 		return nil, apperrors.New(
