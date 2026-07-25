@@ -10,11 +10,14 @@ type ProductRepository interface {
 	Create(product *models.Product) error
 	GetByID(id uint) (*models.Product, error)
 	GetByIDTx(tx *gorm.DB, id uint) (*models.Product, error)
-	GetAll(query *models.PaginationQuery, filters *models.ProductFilters) ([]models.Product, int64, error)
+	GetAll(
+		query *models.PaginationQuery,
+		filters *models.ProductFilters,
+	) ([]models.Product, int64, error)
 	Update(product *models.Product) error
+	UpdateTx(tx *gorm.DB, product *models.Product) error
 	Delete(id uint) error
 	GetBySku(sku string) (*models.Product, error)
-	UpdateTx(tx *gorm.DB, product *models.Product) error
 }
 
 type productRepository struct {
@@ -22,20 +25,13 @@ type productRepository struct {
 }
 
 func NewProductRepository(db *gorm.DB) ProductRepository {
-	return &productRepository{db: db}
-}
-
-func (r *productRepository) UpdateTx(tx *gorm.DB, product *models.Product) error {
-	return tx.Model(&models.Product{}).
-		Where("id = ?", product.ID).
-		Updates(product).Error
+	return &productRepository{
+		db: db,
+	}
 }
 
 func (r *productRepository) Create(product *models.Product) error {
-	if result := r.db.Create(product); result.Error != nil {
-		return result.Error
-	}
-	return nil
+	return r.db.Create(product).Error
 }
 
 func (r *productRepository) GetByID(id uint) (*models.Product, error) {
@@ -47,10 +43,15 @@ func (r *productRepository) GetByID(id uint) (*models.Product, error) {
 		First(product, id).Error; err != nil {
 		return nil, err
 	}
+
 	return product, nil
 }
 
-func (r *productRepository) GetByIDTx(tx *gorm.DB, id uint) (*models.Product, error) {
+func (r *productRepository) GetByIDTx(
+	tx *gorm.DB,
+	id uint,
+) (*models.Product, error) {
+
 	product := &models.Product{}
 
 	if err := tx.
@@ -63,25 +64,40 @@ func (r *productRepository) GetByIDTx(tx *gorm.DB, id uint) (*models.Product, er
 	return product, nil
 }
 
-func (r *productRepository) GetAll(query *models.PaginationQuery, filters *models.ProductFilters) ([]models.Product, int64, error) {
-	var products []models.Product
-	var total int64
+func (r *productRepository) GetAll(
+	query *models.PaginationQuery,
+	filters *models.ProductFilters,
+) ([]models.Product, int64, error) {
+
+	var (
+		products []models.Product
+		total    int64
+	)
 
 	db := r.db.Model(&models.Product{})
 
 	if filters != nil {
+
+		if filters.MerchantID > 0 {
+			db = db.Where("merchant_id = ?", filters.MerchantID)
+		}
+
 		if filters.CategoryID > 0 {
 			db = db.Where("category_id = ?", filters.CategoryID)
 		}
+
 		if filters.MinPrice > 0 {
 			db = db.Where("price >= ?", filters.MinPrice)
 		}
+
 		if filters.MaxPrice > 0 {
 			db = db.Where("price <= ?", filters.MaxPrice)
 		}
+
 		if filters.InStock != nil && *filters.InStock {
 			db = db.Where("stock > 0")
 		}
+
 		if filters.SearchQuery != "" {
 			db = db.Where(
 				"name ILIKE ? OR description ILIKE ?",
@@ -95,17 +111,14 @@ func (r *productRepository) GetAll(query *models.PaginationQuery, filters *model
 		return nil, 0, err
 	}
 
-	db = db.Preload("Category")
-
 	offset := (query.Page - 1) * query.PageSize
-	db = db.Offset(offset).Limit(query.PageSize)
 
 	allowedSorts := map[string]bool{
 		"id":         true,
 		"name":       true,
 		"price":      true,
-		"created_at": true,
 		"stock":      true,
+		"created_at": true,
 	}
 
 	sortField := "created_at"
@@ -113,7 +126,12 @@ func (r *productRepository) GetAll(query *models.PaginationQuery, filters *model
 		sortField = query.Sort
 	}
 
-	db = db.Order(sortField + " " + query.Order)
+	db = db.
+		Preload("Category").
+		Preload("Images").
+		Offset(offset).
+		Limit(query.PageSize).
+		Order(sortField + " " + query.Order)
 
 	if err := db.Find(&products).Error; err != nil {
 		return nil, 0, err
@@ -123,7 +141,9 @@ func (r *productRepository) GetAll(query *models.PaginationQuery, filters *model
 }
 
 func (r *productRepository) Update(product *models.Product) error {
-	result := r.db.Model(&models.Product{}).
+
+	result := r.db.
+		Model(&models.Product{}).
 		Where("id = ?", product.ID).
 		Updates(product)
 
@@ -131,10 +151,36 @@ func (r *productRepository) Update(product *models.Product) error {
 		return result.Error
 	}
 
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
+}
+
+func (r *productRepository) UpdateTx(
+	tx *gorm.DB,
+	product *models.Product,
+) error {
+
+	result := tx.
+		Model(&models.Product{}).
+		Where("id = ?", product.ID).
+		Updates(product)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
 	return nil
 }
 
 func (r *productRepository) Delete(id uint) error {
+
 	result := r.db.Delete(&models.Product{}, id)
 
 	if result.Error != nil {
@@ -149,9 +195,12 @@ func (r *productRepository) Delete(id uint) error {
 }
 
 func (r *productRepository) GetBySku(sku string) (*models.Product, error) {
+
 	product := &models.Product{}
 
-	if err := r.db.Where("sku = ?", sku).First(product).Error; err != nil {
+	if err := r.db.
+		Where("sku = ?", sku).
+		First(product).Error; err != nil {
 		return nil, err
 	}
 

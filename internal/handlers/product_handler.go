@@ -34,6 +34,12 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		return
 	}
 
+	merchantID, err := getMerchantID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
 	var images []*multipart.FileHeader
 
 	form, err := c.MultipartForm()
@@ -41,7 +47,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		images = form.File["images"]
 	}
 
-	product, err := h.productService.CreateProduct(&req, images)
+	product, err := h.productService.CreateProduct(merchantID, &req, images)
 	if err != nil {
 		c.Error(err)
 		return
@@ -96,6 +102,12 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 		return
 	}
 
+	merchantID, err := getMerchantID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
 	var req dto.UpdateProductRequest
 	if err := c.ShouldBind(&req); err != nil {
 		c.Error(apperrors.New(
@@ -114,7 +126,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 		images = form.File["images"]
 	}
 
-	product, err := h.productService.UpdateProduct(uint(id), &req, images)
+	product, err := h.productService.UpdateProduct(merchantID, uint(id), &req, images)
 	if err != nil {
 		c.Error(err)
 		return
@@ -135,10 +147,66 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 		return
 	}
 
-	if err := h.productService.DeleteProduct(uint(id)); err != nil {
+	merchantID, err := getMerchantID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	if err := h.productService.DeleteProduct(merchantID, uint(id)); err != nil {
 		c.Error(err)
 		return
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func (h *ProductHandler) GetMerchantProducts(c *gin.Context) {
+	merchantID, err := getMerchantID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	q, f := query.NewProductQueryFromGin(c)
+
+	f.MerchantID = merchantID
+
+	resp, err := h.productService.GetProducts(q, f)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+func (h *ProductHandler) GetMerchantProduct(c *gin.Context) {
+	merchantID, err := getMerchantID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_product_id",
+			"invalid product id",
+			err,
+		))
+		return
+	}
+
+	product, err := h.productService.GetMerchantProduct(
+		merchantID,
+		uint(id),
+	)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, product)
 }

@@ -37,6 +37,7 @@ func NewProductService(
 }
 
 func (s *ProductService) CreateProduct(
+	merchantID uint,
 	req *dto.CreateProductRequest,
 	images []*multipart.FileHeader,
 ) (*models.Product, error) {
@@ -66,6 +67,7 @@ func (s *ProductService) CreateProduct(
 		Price:       req.Price,
 		Stock:       req.Stock,
 		CategoryID:  req.CategoryID,
+		MerchantID:  merchantID,
 		Sku:         req.Sku,
 		Slug:        req.Slug,
 	}
@@ -206,6 +208,7 @@ func (s *ProductService) GetProducts(query *models.PaginationQuery, filters *mod
 
 func (s *ProductService) UpdateProduct(
 	id uint,
+	merchantID uint,
 	req *dto.UpdateProductRequest,
 	images []*multipart.FileHeader,
 ) (*models.Product, error) {
@@ -225,6 +228,15 @@ func (s *ProductService) UpdateProduct(
 			"fetch_product_failed",
 			"failed to fetch product",
 			err,
+		)
+	}
+
+	if product.MerchantID != merchantID {
+		return nil, apperrors.New(
+			http.StatusForbidden,
+			"forbidden",
+			"you do not own this product",
+			nil,
 		)
 	}
 
@@ -279,7 +291,35 @@ func (s *ProductService) UpdateProduct(
 	return product, nil
 }
 
-func (s *ProductService) DeleteProduct(id uint) error {
+func (s *ProductService) DeleteProduct(merchantID uint, id uint) error {
+	product, err := s.productRepo.GetByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return apperrors.New(
+				http.StatusNotFound,
+				"product_not_found",
+				"product not found",
+				err,
+			)
+		}
+
+		return apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_product_failed",
+			"failed to fetch product",
+			err,
+		)
+	}
+
+	if product.MerchantID != merchantID {
+		return apperrors.New(
+			http.StatusForbidden,
+			"forbidden",
+			"you do not own this product",
+			nil,
+		)
+	}
+
 	if err := s.productRepo.Delete(id); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return apperrors.New(
@@ -297,5 +337,42 @@ func (s *ProductService) DeleteProduct(id uint) error {
 			err,
 		)
 	}
+
 	return nil
+}
+
+func (s *ProductService) GetMerchantProduct(
+	merchantID uint,
+	productID uint,
+) (*models.Product, error) {
+
+	product, err := s.productRepo.GetByID(productID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(
+				http.StatusNotFound,
+				"product_not_found",
+				"product not found",
+				err,
+			)
+		}
+
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_product_failed",
+			"failed to fetch product",
+			err,
+		)
+	}
+
+	if product.MerchantID != merchantID {
+		return nil, apperrors.New(
+			http.StatusForbidden,
+			"access_denied",
+			"you do not have permission to access this product",
+			nil,
+		)
+	}
+
+	return product, nil
 }

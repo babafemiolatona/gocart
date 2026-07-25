@@ -176,6 +176,8 @@ func SetupRoutes(
 
 				products := merchantProtected.Group("/products")
 				{
+					products.GET("", productHandler.GetMerchantProducts)
+					products.GET("/:id", productHandler.GetMerchantProduct)
 					products.POST("", productHandler.CreateProduct)
 					products.PUT("/:id", productHandler.UpdateProduct)
 					products.DELETE("/:id", productHandler.DeleteProduct)
