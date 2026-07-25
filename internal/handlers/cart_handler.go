@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
 	"gocart/internal/services"
@@ -19,31 +18,11 @@ func NewCartHandler(cartService *services.CartService) *CartHandler {
 	return &CartHandler{cartService: cartService}
 }
 
-func getUserID(c *gin.Context) (uint, error) {
-	userID, exists := c.Get("userID")
-
-	if !exists {
-		return 0, errors.New("missing user id")
-	}
-
-	id, ok := userID.(uint)
-	if !ok {
-		return 0, errors.New("invalid user id")
-	}
-
-	return id, nil
-}
-
 func (h *CartHandler) GetCart(c *gin.Context) {
 	userID, err := getUserID(c)
 
 	if err != nil {
-		c.Error(apperrors.New(
-			http.StatusUnauthorized,
-			"unauthorized",
-			"unauthorized access",
-			err,
-		))
+		c.Error(err)
 		return
 	}
 
@@ -60,12 +39,7 @@ func (h *CartHandler) AddToCart(c *gin.Context) {
 	userID, err := getUserID(c)
 
 	if err != nil {
-		c.Error(apperrors.New(
-			http.StatusUnauthorized,
-			"unauthorized",
-			"unauthorized access",
-			err,
-		))
+		c.Error(err)
 		return
 	}
 
@@ -93,12 +67,7 @@ func (h *CartHandler) UpdateCartItem(c *gin.Context) {
 	userID, err := getUserID(c)
 
 	if err != nil {
-		c.Error(apperrors.New(
-			http.StatusUnauthorized,
-			"unauthorized",
-			"unauthorized access",
-			err,
-		))
+		c.Error(err)
 		return
 	}
 
@@ -136,12 +105,7 @@ func (h *CartHandler) UpdateCartItem(c *gin.Context) {
 func (h *CartHandler) RemoveFromCart(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.Error(apperrors.New(
-			http.StatusUnauthorized,
-			"unauthorized",
-			"unauthorized access",
-			err,
-		))
+		c.Error(err)
 		return
 	}
 
@@ -168,12 +132,7 @@ func (h *CartHandler) RemoveFromCart(c *gin.Context) {
 func (h *CartHandler) ClearCart(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.Error(apperrors.New(
-			http.StatusUnauthorized,
-			"unauthorized",
-			"unauthorized access",
-			err,
-		))
+		c.Error(err)
 		return
 	}
 

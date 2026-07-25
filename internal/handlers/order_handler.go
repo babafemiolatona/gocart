@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	apperrors "gocart/internal/errors"
 	"gocart/internal/models"
 	"gocart/internal/services"
@@ -19,29 +18,11 @@ func NewOrderHandler(orderService *services.OrderService) *OrderHandler {
 	return &OrderHandler{orderService: orderService}
 }
 
-func getUserId(c *gin.Context) (uint, error) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		return 0, errors.New("missing user id")
-	}
-
-	id, ok := userID.(uint)
-	if !ok {
-		return 0, errors.New("invalid user id")
-	}
-
-	return id, nil
-}
-
 func (h *OrderHandler) Checkout(c *gin.Context) {
-	userID, err := getUserId(c)
+	userID, err := getUserID(c)
 	if err != nil {
-		c.Error(apperrors.New(
-			http.StatusUnauthorized,
-			"unauthorized",
-			"unauthorized",
-			err,
-		))
+		c.Error(err)
+		return
 	}
 
 	var req models.CheckoutRequest
@@ -66,14 +47,9 @@ func (h *OrderHandler) Checkout(c *gin.Context) {
 }
 
 func (h *OrderHandler) GetMyOrders(c *gin.Context) {
-	userID, err := getUserId(c)
+	userID, err := getUserID(c)
 	if err != nil {
-		c.Error(apperrors.New(
-			http.StatusUnauthorized,
-			"unauthorized",
-			"unauthorized",
-			err,
-		))
+		c.Error(err)
 		return
 	}
 
