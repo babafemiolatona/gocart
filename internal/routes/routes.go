@@ -27,28 +27,33 @@ func SetupRoutes(
 	{
 		userHandler := handlers.NewUserHandler(userService)
 
-		// -----------------------
+		// ----------------------------------
 		// Authentication
-		// -----------------------
+		// ----------------------------------
+
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/register", userHandler.Register)
 			auth.POST("/login", userHandler.Login)
 		}
 
-		// -----------------------
+		// ----------------------------------
 		// Repositories
-		// -----------------------
+		// ----------------------------------
+
+		userRepo := repositories.NewUserRepository(db)
 		productRepo := repositories.NewProductRepository(db)
 		categoryRepo := repositories.NewCategoryRepository(db)
 		cartRepo := repositories.NewCartRepository(db)
 		orderRepo := repositories.NewOrderRepository(db)
-		productImageRepo := repositories.NewProductImageRepository(db)
 		paymentRepo := repositories.NewPaymentRepository(db)
+		productImageRepo := repositories.NewProductImageRepository(db)
+		merchantRepo := repositories.NewMerchantRepository(db)
 
-		// -----------------------
+		// ----------------------------------
 		// Services
-		// -----------------------
+		// ----------------------------------
+
 		productService := services.NewProductService(
 			productRepo,
 			categoryRepo,
@@ -77,18 +82,26 @@ func SetupRoutes(
 			productRepo,
 		)
 
-		// -----------------------
+		merchantService := services.NewMerchantService(
+			merchantRepo,
+			userRepo,
+		)
+
+		// ----------------------------------
 		// Handlers
-		// -----------------------
+		// ----------------------------------
+
 		productHandler := handlers.NewProductHandler(productService)
 		categoryHandler := handlers.NewCategoryHandler(categoryService)
 		cartHandler := handlers.NewCartHandler(cartService)
 		orderHandler := handlers.NewOrderHandler(orderService)
 		paymentHandler := handlers.NewPaymentHandler(paymentService)
+		merchantHandler := handlers.NewMerchantHandler(merchantService)
 
-		// -----------------------
+		// ----------------------------------
 		// Public Routes
-		// -----------------------
+		// ----------------------------------
+
 		public := v1.Group("")
 		{
 			products := public.Group("/products")
@@ -104,9 +117,10 @@ func SetupRoutes(
 			}
 		}
 
-		// -----------------------
-		// Authenticated User Routes
-		// -----------------------
+		// ----------------------------------
+		// Authenticated Routes
+		// ----------------------------------
+
 		protected := v1.Group("")
 		protected.Use(middleware.AuthMiddleware(userService))
 		{
@@ -137,24 +151,48 @@ func SetupRoutes(
 				payments.POST("/:reference/process", paymentHandler.ProcessPayment)
 				payments.GET("/:reference", paymentHandler.GetPayment)
 			}
+
+			// ----------------------------------
+			// Merchant Registration
+			// (Customer -> Merchant)
+			// ----------------------------------
+
+			merchant := protected.Group("/merchant")
+			{
+				merchant.POST("/register", merchantHandler.RegisterMerchant)
+			}
+
+			// ----------------------------------
+			// Merchant-only Routes
+			// ----------------------------------
+
+			merchantProtected := protected.Group("/merchant")
+			merchantProtected.Use(
+				middleware.RequireMerchant(merchantRepo),
+			)
+			{
+				merchantProtected.GET("/profile", merchantHandler.GetProfile)
+				merchantProtected.PUT("/profile", merchantHandler.UpdateProfile)
+
+				products := merchantProtected.Group("/products")
+				{
+					products.POST("", productHandler.CreateProduct)
+					products.PUT("/:id", productHandler.UpdateProduct)
+					products.DELETE("/:id", productHandler.DeleteProduct)
+				}
+			}
 		}
 
-		// -----------------------
+		// ----------------------------------
 		// Admin Routes
-		// -----------------------
+		// ----------------------------------
+
 		admin := v1.Group("/admin")
 		admin.Use(
 			middleware.AuthMiddleware(userService),
 			middleware.RequireRole(models.RoleAdmin),
 		)
 		{
-			products := admin.Group("/products")
-			{
-				products.POST("", productHandler.CreateProduct)
-				products.PUT("/:id", productHandler.UpdateProduct)
-				products.DELETE("/:id", productHandler.DeleteProduct)
-			}
-
 			categories := admin.Group("/categories")
 			{
 				categories.POST("", categoryHandler.CreateCategory)

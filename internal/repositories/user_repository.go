@@ -12,8 +12,10 @@ type UserRepository interface {
 	GetByEmail(email string) (*models.User, error)
 	GetByEmailOrUsername(identifier string) (*models.User, error)
 	GetByID(id uint) (*models.User, error)
+	GetByIDTx(tx *gorm.DB, id uint) (*models.User, error)
 	ExistsByEmail(email string) (bool, error)
 	Update(user *models.User) error
+	UpdateTx(tx *gorm.DB, user *models.User) error
 	Delete(id uint) error
 }
 
@@ -85,6 +87,16 @@ func (r *userRepository) GetByID(id uint) (*models.User, error) {
 	return user, nil
 }
 
+func (r *userRepository) GetByIDTx(tx *gorm.DB, id uint) (*models.User, error) {
+	var user models.User
+
+	if err := tx.First(&user, id).Error; err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func (r *userRepository) Update(user *models.User) error {
 	result := r.db.Model(&models.User{}).
 		Where("id = ?", user.ID).
@@ -99,6 +111,10 @@ func (r *userRepository) Update(user *models.User) error {
 	}
 
 	return nil
+}
+
+func (r *userRepository) UpdateTx(tx *gorm.DB, user *models.User) error {
+	return tx.Save(user).Error
 }
 
 func (r *userRepository) Delete(id uint) error {

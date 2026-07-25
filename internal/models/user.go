@@ -23,6 +23,7 @@ type User struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Password  string    `gorm:"not null" json:"-"`
+	Merchant  *Merchant `gorm:"foreignKey:UserID" json:"merchant,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
