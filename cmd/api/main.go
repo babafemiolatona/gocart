@@ -1,6 +1,20 @@
 package main
 
+// @title GoCart API
+// @version 1.0
+// @description E-commerce REST API built with Gin.
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+
 import (
+	_ "gocart/docs"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
 	"log"
 
 	"gocart/internal/config"
@@ -47,7 +61,7 @@ func main() {
 		log.Fatalf("failed to seed admin: %v", err)
 	}
 
-	userService := services.NewUserService(userRepo, config.CFG)
+	AuthService := services.NewAuthService(userRepo, config.CFG)
 
 	// Set Gin mode
 	if config.CFG.Env == "production" {
@@ -57,8 +71,11 @@ func main() {
 	// Create router
 	router := gin.Default()
 
+	// Swagger endpoint
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// Setup routes
-	routes.SetupRoutes(router, db, userService, minioStorage)
+	routes.SetupRoutes(router, db, AuthService, minioStorage)
 
 	// Start server
 	log.Printf("Starting server on %s", config.CFG.ServerPort)

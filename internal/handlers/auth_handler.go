@@ -9,15 +9,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type UserHandler struct {
-	userService *services.UserService
+type AuthHandler struct {
+	authService *services.AuthService
 }
 
-func NewUserHandler(userService *services.UserService) *UserHandler {
-	return &UserHandler{userService: userService}
+func NewAuthHandler(authService *services.AuthService) *AuthHandler {
+	return &AuthHandler{authService: authService}
 }
 
-func (h *UserHandler) Register(c *gin.Context) {
+func (h *AuthHandler) Register(c *gin.Context) {
 	var req models.RegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -25,7 +25,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.Register(&req)
+	user, err := h.authService.Register(&req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -34,7 +34,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, user)
 }
 
-func (h *UserHandler) Login(c *gin.Context) {
+func (h *AuthHandler) Login(c *gin.Context) {
 	var req models.LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -42,7 +42,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.userService.Login(&req)
+	resp, err := h.authService.Login(&req)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -51,14 +51,14 @@ func (h *UserHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func (h *UserHandler) GetProfile(c *gin.Context) {
+func (h *AuthHandler) GetProfile(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	user, err := h.userService.GetUserByID(userID.(uint))
+	user, err := h.authService.GetUserByID(userID.(uint))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return

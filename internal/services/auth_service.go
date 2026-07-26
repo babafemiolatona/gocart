@@ -14,19 +14,19 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type UserService struct {
+type AuthService struct {
 	userRepo repositories.UserRepository
 	config   *config.Config
 }
 
-func NewUserService(userRepo repositories.UserRepository, cfg *config.Config) *UserService {
-	return &UserService{
+func NewAuthService(userRepo repositories.UserRepository, cfg *config.Config) *AuthService {
+	return &AuthService{
 		userRepo: userRepo,
 		config:   cfg,
 	}
 }
 
-func (s *UserService) Register(req *models.RegisterRequest) (*models.User, error) {
+func (s *AuthService) Register(req *models.RegisterRequest) (*models.User, error) {
 
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
@@ -62,7 +62,7 @@ func (s *UserService) Register(req *models.RegisterRequest) (*models.User, error
 	return user, nil
 }
 
-func (s *UserService) Login(req *models.LoginRequest) (*models.AuthResponse, error) {
+func (s *AuthService) Login(req *models.LoginRequest) (*models.AuthResponse, error) {
 	identifier := strings.ToLower(strings.TrimSpace(req.UsernameOrEmail))
 
 	user, err := s.userRepo.GetByEmailOrUsername(identifier)
@@ -92,7 +92,7 @@ type CustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-func (s *UserService) GenerateToken(user *models.User) (string, int64, error) {
+func (s *AuthService) GenerateToken(user *models.User) (string, int64, error) {
 	expiresAt := time.Now().Add(s.config.JWTExpiry)
 
 	claims := CustomClaims{
@@ -117,7 +117,7 @@ func (s *UserService) GenerateToken(user *models.User) (string, int64, error) {
 	return signedToken, expiresAt.Unix(), nil
 }
 
-func (s *UserService) VerifyToken(tokenStr string) (*CustomClaims, error) {
+func (s *AuthService) VerifyToken(tokenStr string) (*CustomClaims, error) {
 	token, err := jwt.ParseWithClaims(
 		tokenStr,
 		&CustomClaims{},
@@ -141,10 +141,10 @@ func (s *UserService) VerifyToken(tokenStr string) (*CustomClaims, error) {
 	return claims, nil
 }
 
-func (s *UserService) GetUserByID(id uint) (*models.User, error) {
+func (s *AuthService) GetUserByID(id uint) (*models.User, error) {
 	return s.userRepo.GetByID(id)
 }
 
-func (s *UserService) GetJWTSecret() string {
+func (s *AuthService) GetJWTSecret() string {
 	return s.config.JWTSecret
 }

@@ -15,7 +15,7 @@ import (
 func SetupRoutes(
 	router *gin.Engine,
 	db *gorm.DB,
-	userService *services.UserService,
+	AuthService *services.AuthService,
 	storage storage.Storage,
 ) {
 
@@ -25,7 +25,7 @@ func SetupRoutes(
 
 	v1 := router.Group("/api/v1")
 	{
-		userHandler := handlers.NewUserHandler(userService)
+		authHandler := handlers.NewAuthHandler(AuthService)
 
 		// ----------------------------------
 		// Authentication
@@ -33,8 +33,8 @@ func SetupRoutes(
 
 		auth := v1.Group("/auth")
 		{
-			auth.POST("/register", userHandler.Register)
-			auth.POST("/login", userHandler.Login)
+			auth.POST("/register", authHandler.Register)
+			auth.POST("/login", authHandler.Login)
 		}
 
 		// ----------------------------------
@@ -122,11 +122,11 @@ func SetupRoutes(
 		// ----------------------------------
 
 		protected := v1.Group("")
-		protected.Use(middleware.AuthMiddleware(userService))
+		protected.Use(middleware.AuthMiddleware(AuthService))
 		{
 			users := protected.Group("/users")
 			{
-				users.GET("/profile", userHandler.GetProfile)
+				users.GET("/profile", authHandler.GetProfile)
 			}
 
 			cart := protected.Group("/cart")
@@ -191,7 +191,7 @@ func SetupRoutes(
 
 		admin := v1.Group("/admin")
 		admin.Use(
-			middleware.AuthMiddleware(userService),
+			middleware.AuthMiddleware(AuthService),
 			middleware.RequireRole(models.RoleAdmin),
 		)
 		{
