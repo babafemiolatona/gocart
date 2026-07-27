@@ -2,45 +2,64 @@ package services
 
 import (
 	"errors"
-	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"gocart/internal/config"
+	"gocart/internal/dto"
+	apperrors "gocart/internal/errors"
+	"gocart/internal/mapper"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
 
 	"github.com/golang-jwt/jwt/v5"
+	"gorm.io/gorm"
 )
 
 type AuthService struct {
-	userRepo repositories.UserRepository
+	authRepo repositories.AuthRepository
 	config   *config.Config
 }
 
-func NewAuthService(userRepo repositories.UserRepository, cfg *config.Config) *AuthService {
+func NewAuthService(authRepo repositories.AuthRepository, cfg *config.Config) *AuthService {
 	return &AuthService{
-		userRepo: userRepo,
+		authRepo: authRepo,
 		config:   cfg,
 	}
 }
 
-func (s *AuthService) Register(req *models.RegisterRequest) (*models.User, error) {
+func (s *AuthService) Register(req *dto.RegisterRequest) (*dto.UserResponse, error) {
 
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
 	if err := req.Validate(); err != nil {
-		return nil, err
+		return nil, apperrors.New(
+			http.StatusBadRequest,
+			"validation_error",
+			err.Error(),
+			err,
+		)
 	}
 
-	exists, err := s.userRepo.ExistsByEmail(req.Email)
-	if err == nil && exists {
-		return nil, fmt.Errorf("failed to check email: %w", err)
+	exists, err := s.authRepo.ExistsByEmail(req.Email)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"check_user_failed",
+			"failed to check if user already exists",
+			err,
+		)
 	}
 
 	if exists {
-		return nil, errors.New("user already exists")
+		return nil, apperrors.New(
+			http.StatusConflict,
+			"user_exists",
+			"user already exists",
+			nil,
+		)
 	}
 
 	user := &models.User{
@@ -48,38 +67,72 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.User, error
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Username:  req.Username,
-		Role:      models.RoleCustomer, // Default to customer role
+		Role:      models.RoleCustomer,
 	}
 
 	if err := user.HashPassword(req.Password); err != nil {
-		return nil, errors.New("failed to hash password")
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"hash_password_failed",
+			"failed to hash password",
+			err,
+		)
 	}
 
-	if err := s.userRepo.Create(user); err != nil {
-		return nil, errors.New("failed to create user")
+	if err := s.authRepo.Create(user); err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, apperrors.New(
+				http.StatusConflict,
+				"user_exists",
+				"user already exists",
+				nil,
+			)
+		}
+
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"create_user_failed",
+			"failed to create user",
+			err,
+		)
 	}
 
-	return user, nil
+	return mapper.ToUserResponse(user), nil
 }
 
-func (s *AuthService) Login(req *models.LoginRequest) (*models.AuthResponse, error) {
+func (s *AuthService) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 	identifier := strings.ToLower(strings.TrimSpace(req.UsernameOrEmail))
 
-	user, err := s.userRepo.GetByEmailOrUsername(identifier)
+	user, err := s.authRepo.GetByEmailOrUsername(identifier)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, apperrors.New(
+			http.StatusUnauthorized,
+			"invalid_credentials",
+			"invalid username/email or password",
+			nil,
+		)
 	}
 
 	if !user.VerifyPassword(req.Password) {
-		return nil, errors.New("invalid credentials")
+		return nil, apperrors.New(
+			http.StatusUnauthorized,
+			"invalid_credentials",
+			"invalid username/email or password",
+			nil,
+		)
 	}
 
 	token, expiresAt, err := s.GenerateToken(user)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate token: %w", err)
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"generate_token_failed",
+			"failed to generate token",
+			err,
+		)
 	}
 
-	return &models.AuthResponse{
+	return &dto.AuthResponse{
 		Token:     token,
 		ExpiresAt: expiresAt,
 	}, nil
@@ -139,10 +192,6 @@ func (s *AuthService) VerifyToken(tokenStr string) (*CustomClaims, error) {
 	}
 
 	return claims, nil
-}
-
-func (s *AuthService) GetUserByID(id uint) (*models.User, error) {
-	return s.userRepo.GetByID(id)
 }
 
 func (s *AuthService) GetJWTSecret() string {

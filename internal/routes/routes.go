@@ -15,7 +15,7 @@ import (
 func SetupRoutes(
 	router *gin.Engine,
 	db *gorm.DB,
-	AuthService *services.AuthService,
+	authService *services.AuthService,
 	storage storage.Storage,
 ) {
 
@@ -25,7 +25,7 @@ func SetupRoutes(
 
 	v1 := router.Group("/api/v1")
 	{
-		authHandler := handlers.NewAuthHandler(AuthService)
+		authHandler := handlers.NewAuthHandler(authService)
 
 		// ----------------------------------
 		// Authentication
@@ -41,6 +41,7 @@ func SetupRoutes(
 		// Repositories
 		// ----------------------------------
 
+		authRepo := repositories.NewAuthRepository(db)
 		userRepo := repositories.NewUserRepository(db)
 		productRepo := repositories.NewProductRepository(db)
 		categoryRepo := repositories.NewCategoryRepository(db)
@@ -84,13 +85,16 @@ func SetupRoutes(
 
 		merchantService := services.NewMerchantService(
 			merchantRepo,
-			userRepo,
+			authRepo,
 		)
+
+		userService := services.NewUserService(userRepo)
 
 		// ----------------------------------
 		// Handlers
 		// ----------------------------------
 
+		userHandler := handlers.NewUserHandler(userService)
 		productHandler := handlers.NewProductHandler(productService)
 		categoryHandler := handlers.NewCategoryHandler(categoryService)
 		cartHandler := handlers.NewCartHandler(cartService)
@@ -122,11 +126,11 @@ func SetupRoutes(
 		// ----------------------------------
 
 		protected := v1.Group("")
-		protected.Use(middleware.AuthMiddleware(AuthService))
+		protected.Use(middleware.AuthMiddleware(authService))
 		{
 			users := protected.Group("/users")
 			{
-				users.GET("/profile", authHandler.GetProfile)
+				users.GET("/me", userHandler.GetMe)
 			}
 
 			cart := protected.Group("/cart")
@@ -171,8 +175,8 @@ func SetupRoutes(
 				middleware.RequireMerchant(merchantRepo),
 			)
 			{
-				merchantProtected.GET("/profile", merchantHandler.GetProfile)
-				merchantProtected.PUT("/profile", merchantHandler.UpdateProfile)
+				merchantProtected.GET("/me", merchantHandler.GetMe)
+				merchantProtected.PUT("/me", merchantHandler.UpdateMe)
 
 				products := merchantProtected.Group("/products")
 				{
@@ -191,7 +195,7 @@ func SetupRoutes(
 
 		admin := v1.Group("/admin")
 		admin.Use(
-			middleware.AuthMiddleware(AuthService),
+			middleware.AuthMiddleware(authService),
 			middleware.RequireRole(models.RoleAdmin),
 		)
 		{

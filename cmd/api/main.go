@@ -55,13 +55,13 @@ func main() {
 	}
 
 	// Create service layer
-	userRepo := repositories.NewUserRepository(db)
+	authRepo := repositories.NewAuthRepository(db)
 
-	if err := seed.SeedAdmin(userRepo); err != nil {
+	if err := seed.SeedAdmin(authRepo); err != nil {
 		log.Fatalf("failed to seed admin: %v", err)
 	}
 
-	AuthService := services.NewAuthService(userRepo, config.CFG)
+	AuthService := services.NewAuthService(authRepo, config.CFG)
 
 	// Set Gin mode
 	if config.CFG.Env == "production" {

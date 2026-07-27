@@ -10,8 +10,8 @@ import (
 	"gorm.io/gorm"
 )
 
-func SeedAdmin(userRepo repositories.UserRepository) error {
-	_, err := userRepo.GetByEmail("admin@gocart.com")
+func SeedAdmin(authRepo repositories.AuthRepository) error {
+	_, err := authRepo.GetByEmail("admin@gocart.com")
 	if err == nil {
 		log.Println("Admin user already exists, skipping seeding")
 		return nil
@@ -38,7 +38,7 @@ func SeedAdmin(userRepo repositories.UserRepository) error {
 		Role:      models.RoleAdmin,
 	}
 
-	if err := userRepo.Create(adminUser); err != nil {
+	if err := authRepo.Create(adminUser); err != nil {
 		return err
 	}
 
