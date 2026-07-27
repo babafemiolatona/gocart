@@ -15,16 +15,16 @@ import (
 
 type MerchantService struct {
 	merchantRepo repositories.MerchantRepository
-	userRepo     repositories.UserRepository
+	userRepo     repositories.AuthRepository
 }
 
 func NewMerchantService(
 	merchantRepo repositories.MerchantRepository,
-	userRepo repositories.UserRepository,
+	authRepo repositories.AuthRepository,
 ) *MerchantService {
 	return &MerchantService{
 		merchantRepo: merchantRepo,
-		userRepo:     userRepo,
+		userRepo:     authRepo,
 	}
 }
 

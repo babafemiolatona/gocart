@@ -5,11 +5,18 @@ import (
 	"net/http"
 
 	apperrors "gocart/internal/errors"
-	"gocart/internal/services"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
+
+func writeError(c *gin.Context, status int, code, message string) {
+	c.JSON(status, apperrors.ErrorResponse{
+		Error: apperrors.ErrorDetail{
+			Code:    code,
+			Message: message,
+		},
+	})
+}
 
 func ErrorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -22,40 +29,16 @@ func ErrorHandler() gin.HandlerFunc {
 		err := c.Errors.Last().Err
 
 		var appErr *apperrors.AppError
-
-		switch {
-
-		case errors.As(err, &appErr):
-			c.JSON(appErr.Status, gin.H{
-				"error": gin.H{
-					"code":    appErr.Code,
-					"message": appErr.Message,
-				},
-			})
-
-		case errors.Is(err, services.ErrCategoryNotFound):
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": gin.H{
-					"code":    "category_not_found",
-					"message": "category not found",
-				},
-			})
-
-		case errors.Is(err, gorm.ErrDuplicatedKey):
-			c.JSON(http.StatusConflict, gin.H{
-				"error": gin.H{
-					"code":    "duplicate_resource",
-					"message": "resource already exists",
-				},
-			})
-
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": gin.H{
-					"code":    "internal_server_error",
-					"message": "internal server error",
-				},
-			})
+		if errors.As(err, &appErr) {
+			writeError(c, appErr.Status, appErr.Code, appErr.Message)
+			return
 		}
+
+		writeError(
+			c,
+			http.StatusInternalServerError,
+			"internal_server_error",
+			"internal server error",
+		)
 	}
 }

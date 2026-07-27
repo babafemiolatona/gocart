@@ -54,7 +54,7 @@ func (h *MerchantHandler) RegisterMerchant(c *gin.Context) {
 	c.JSON(http.StatusCreated, merchant)
 }
 
-func (h *MerchantHandler) GetProfile(c *gin.Context) {
+func (h *MerchantHandler) GetMe(c *gin.Context) {
 
 	userID, err := getUserID(c)
 	if err != nil {
@@ -71,7 +71,7 @@ func (h *MerchantHandler) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, merchant)
 }
 
-func (h *MerchantHandler) UpdateProfile(c *gin.Context) {
+func (h *MerchantHandler) UpdateMe(c *gin.Context) {
 
 	var req dto.UpdateMerchantRequest
 
