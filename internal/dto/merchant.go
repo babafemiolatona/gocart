@@ -2,7 +2,7 @@ package dto
 
 import "time"
 
-type MerchantRegistrationRequest struct {
+type MerchantRegisterRequest struct {
 	BusinessName string `json:"business_name" binding:"required"`
 	Description  string `json:"description"`
 	Phone        string `json:"phone"`
@@ -24,4 +24,5 @@ type MerchantResponse struct {
 	LogoURL      string    `json:"logo_url"`
 	IsVerified   bool      `json:"is_verified"`
 	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }

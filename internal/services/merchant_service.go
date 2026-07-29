@@ -30,7 +30,7 @@ func NewMerchantService(
 
 func (s *MerchantService) RegisterMerchant(
 	userID uint,
-	req *dto.MerchantRegistrationRequest,
+	req *dto.MerchantRegisterRequest,
 ) (*dto.MerchantResponse, error) {
 
 	var merchant models.Merchant

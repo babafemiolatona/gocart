@@ -14,5 +14,6 @@ func ToMerchantResponse(merchant *models.Merchant) *dto.MerchantResponse {
 		LogoURL:      merchant.LogoURL,
 		IsVerified:   merchant.IsVerified,
 		CreatedAt:    merchant.CreatedAt,
+		UpdatedAt:    merchant.UpdatedAt,
 	}
 }

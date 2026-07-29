@@ -2,7 +2,9 @@ package services
 
 import (
 	"errors"
+	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
+	"gocart/internal/mapper"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
 	"net/http"
@@ -20,7 +22,7 @@ func NewCategoryService(categoryRepo repositories.CategoryRepository) *CategoryS
 	return &CategoryService{categoryRepo: categoryRepo}
 }
 
-func (s *CategoryService) CreateCategory(req *models.CategoryRequest) (*models.Category, error) {
+func (s *CategoryService) CreateCategory(req *dto.CategoryRequest) (*dto.CategoryResponse, error) {
 	category := &models.Category{
 		Name:        req.Name,
 		Description: req.Description,
@@ -45,10 +47,10 @@ func (s *CategoryService) CreateCategory(req *models.CategoryRequest) (*models.C
 		)
 	}
 
-	return category, nil
+	return mapper.ToCategoryResponse(category), nil
 }
 
-func (s *CategoryService) GetCategoryByID(id uint) (*models.Category, error) {
+func (s *CategoryService) GetCategoryByID(id uint) (*dto.CategoryResponse, error) {
 	category, err := s.categoryRepo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -66,10 +68,10 @@ func (s *CategoryService) GetCategoryByID(id uint) (*models.Category, error) {
 			err,
 		)
 	}
-	return category, nil
+	return mapper.ToCategoryResponse(category), nil
 }
 
-func (s *CategoryService) GetAllCategories() ([]models.Category, error) {
+func (s *CategoryService) GetAllCategories() ([]dto.CategoryResponse, error) {
 	categories, err := s.categoryRepo.GetAll()
 
 	if err != nil {
@@ -81,10 +83,10 @@ func (s *CategoryService) GetAllCategories() ([]models.Category, error) {
 		)
 	}
 
-	return categories, nil
+	return mapper.ToCategoryResponses(categories), nil
 }
 
-func (s *CategoryService) UpdateCategory(req *models.UpdateCategoryRequest, id uint) (*models.Category, error) {
+func (s *CategoryService) UpdateCategory(req *dto.UpdateCategoryRequest, id uint) (*dto.CategoryResponse, error) {
 	category, err := s.categoryRepo.GetByID(id)
 	if err != nil {
 
@@ -136,7 +138,7 @@ func (s *CategoryService) UpdateCategory(req *models.UpdateCategoryRequest, id u
 		)
 	}
 
-	return category, nil
+	return mapper.ToCategoryResponse(category), nil
 }
 
 func (s *CategoryService) DeleteCategory(id uint) error {
