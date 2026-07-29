@@ -22,9 +22,24 @@ func NewMerchantHandler(
 	}
 }
 
+// RegisterMerchant godoc
+//
+//	@Summary		Register as a merchant
+//	@Description	Register the authenticated user as a merchant
+//	@Tags			Merchants
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		dto.MerchantRegisterRequest	true	"Merchant register request"
+//	@Success		201		{object}	dto.MerchantResponse
+//	@Failure		400		{object}	errors.ErrorResponse
+//	@Failure		401		{object}	errors.ErrorResponse
+//	@Failure		409		{object}	errors.ErrorResponse
+//	@Failure		500		{object}	errors.ErrorResponse
+//	@Router			/api/v1/merchant/register [post]
 func (h *MerchantHandler) RegisterMerchant(c *gin.Context) {
 
-	var req dto.MerchantRegistrationRequest
+	var req dto.MerchantRegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(apperrors.New(
@@ -54,6 +69,19 @@ func (h *MerchantHandler) RegisterMerchant(c *gin.Context) {
 	c.JSON(http.StatusCreated, merchant)
 }
 
+// GetMe godoc
+//
+//	@Summary		Get current merchant
+//	@Description	Get the authenticated merchant profile
+//	@Tags			Merchants
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Success		200	{object}	dto.MerchantResponse
+//	@Failure		401	{object}	errors.ErrorResponse
+//	@Failure		403	{object}	errors.ErrorResponse
+//	@Failure		404	{object}	errors.ErrorResponse
+//	@Failure		500	{object}	errors.ErrorResponse
+//	@Router			/api/v1/merchants/me [get]
 func (h *MerchantHandler) GetMe(c *gin.Context) {
 
 	userID, err := getUserID(c)
@@ -71,6 +99,22 @@ func (h *MerchantHandler) GetMe(c *gin.Context) {
 	c.JSON(http.StatusOK, merchant)
 }
 
+// UpdateMe godoc
+//
+//	@Summary		Update current merchant
+//	@Description	Update the authenticated merchant profile
+//	@Tags			Merchants
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		dto.UpdateMerchantRequest	true	"Merchant update request"
+//	@Success		200	{object}	dto.MerchantResponse
+//	@Failure		400	{object}	errors.ErrorResponse
+//	@Failure		401	{object}	errors.ErrorResponse
+//	@Failure		403	{object}	errors.ErrorResponse
+//	@Failure		404	{object}	errors.ErrorResponse
+//	@Failure		500	{object}	errors.ErrorResponse
+//	@Router			/api/v1/merchants/me [put]
 func (h *MerchantHandler) UpdateMe(c *gin.Context) {
 
 	var req dto.UpdateMerchantRequest

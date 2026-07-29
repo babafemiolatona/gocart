@@ -3,8 +3,6 @@ package main
 // @title GoCart API
 // @version 1.0
 // @description E-commerce REST API built with Gin.
-// @BasePath /api/v1
-
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
