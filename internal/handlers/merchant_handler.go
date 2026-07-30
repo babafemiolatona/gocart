@@ -36,7 +36,7 @@ func NewMerchantHandler(
 //	@Failure		401		{object}	errors.ErrorResponse
 //	@Failure		409		{object}	errors.ErrorResponse
 //	@Failure		500		{object}	errors.ErrorResponse
-//	@Router			/api/v1/merchant/register [post]
+//	@Router			/api/v1/merchants/register [post]
 func (h *MerchantHandler) RegisterMerchant(c *gin.Context) {
 
 	var req dto.MerchantRegisterRequest

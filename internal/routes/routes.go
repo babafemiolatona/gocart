@@ -161,7 +161,7 @@ func SetupRoutes(
 			// (Customer -> Merchant)
 			// ----------------------------------
 
-			merchant := protected.Group("/merchant")
+			merchant := protected.Group("/merchants")
 			{
 				merchant.POST("/register", merchantHandler.RegisterMerchant)
 			}
@@ -170,7 +170,7 @@ func SetupRoutes(
 			// Merchant-only Routes
 			// ----------------------------------
 
-			merchantProtected := protected.Group("/merchant")
+			merchantProtected := protected.Group("/merchants")
 			merchantProtected.Use(
 				middleware.RequireMerchant(merchantRepo),
 			)

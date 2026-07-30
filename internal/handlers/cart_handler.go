@@ -28,7 +28,7 @@ func NewCartHandler(cartService *services.CartService) *CartHandler {
 //	@Success		200	{object}	dto.CartResponse
 //	@Failure		401	{object}	errors.ErrorResponse
 //	@Failure		500	{object}	errors.ErrorResponse
-//	@Router			/cart [get]
+//	@Router			/api/v1/cart [get]
 func (h *CartHandler) GetCart(c *gin.Context) {
 	userID, err := getUserID(c)
 

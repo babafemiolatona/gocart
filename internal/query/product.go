@@ -2,14 +2,24 @@ package query
 
 import (
 	"strconv"
+	"strings"
 
-	"gocart/internal/models"
+	"gocart/internal/dto"
 
 	"github.com/gin-gonic/gin"
 )
 
-func NewProductQueryFromGin(c *gin.Context) (*models.PaginationQuery, *models.ProductFilters) {
-	query := &models.PaginationQuery{
+type ProductFilters struct {
+	CategoryID  uint
+	MerchantID  uint
+	MinPrice    float64
+	MaxPrice    float64
+	InStock     *bool
+	SearchQuery string
+}
+
+func NewProductQueryFromGin(c *gin.Context) (*dto.PaginationQuery, *ProductFilters) {
+	query := &dto.PaginationQuery{
 		Page:     1,
 		PageSize: 10,
 		Sort:     "created_at",
@@ -36,10 +46,10 @@ func NewProductQueryFromGin(c *gin.Context) (*models.PaginationQuery, *models.Pr
 		query.Order = v
 	}
 
-	filters := &models.ProductFilters{}
+	filters := &ProductFilters{}
 
 	if v := c.Query("category_id"); v != "" {
-		if id, err := strconv.Atoi(v); err == nil {
+		if id, err := strconv.ParseUint(v, 10, 32); err == nil {
 			filters.CategoryID = uint(id)
 		}
 	}
@@ -56,13 +66,14 @@ func NewProductQueryFromGin(c *gin.Context) (*models.PaginationQuery, *models.Pr
 		}
 	}
 
-	if v := c.Query("search"); v != "" {
+	if v := strings.TrimSpace(c.Query("search")); v != "" {
 		filters.SearchQuery = v
 	}
 
-	if v := c.Query("in_stock"); v == "true" {
-		b := true
-		filters.InStock = &b
+	if v := c.Query("in_stock"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			filters.InStock = &b
+		}
 	}
 
 	return query, filters

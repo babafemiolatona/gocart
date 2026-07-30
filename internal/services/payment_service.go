@@ -6,7 +6,9 @@ import (
 	"errors"
 	"net/http"
 
+	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
+	"gocart/internal/mapper"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
 
@@ -34,7 +36,7 @@ func NewPaymentService(
 	}
 }
 
-func (s *PaymentService) InitiatePayment(orderID uint) (*models.Payment, error) {
+func (s *PaymentService) InitiatePayment(orderID uint) (*dto.PaymentResponse, error) {
 	order, err := s.orderRepo.GetOrderByID(orderID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -81,10 +83,10 @@ func (s *PaymentService) InitiatePayment(orderID uint) (*models.Payment, error) 
 		)
 	}
 
-	return payment, nil
+	return mapper.ToPaymentResponse(payment), nil
 }
 
-func (s *PaymentService) ProcessPayment(reference string) (*models.Payment, error) {
+func (s *PaymentService) ProcessPayment(reference string) (*dto.PaymentResponse, error) {
 	payment, err := s.paymentRepo.GetByReference(reference)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -106,7 +108,7 @@ func (s *PaymentService) ProcessPayment(reference string) (*models.Payment, erro
 
 	// Idempotency
 	if payment.Status == models.PaymentStatusSucceeded {
-		return payment, nil
+		return mapper.ToPaymentResponse(payment), nil
 	}
 
 	order, err := s.orderRepo.GetOrderByID(payment.OrderID)
@@ -224,10 +226,29 @@ func (s *PaymentService) ProcessPayment(reference string) (*models.Payment, erro
 		return nil, err
 	}
 
-	return s.paymentRepo.GetByReference(reference)
+	payment, err = s.paymentRepo.GetByReference(reference)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(
+				http.StatusNotFound,
+				"payment_not_found",
+				"payment not found",
+				err,
+			)
+		}
+
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_payment_failed",
+			"failed to fetch payment",
+			err,
+		)
+	}
+
+	return mapper.ToPaymentResponse(payment), nil
 }
 
-func (s *PaymentService) GetPayment(reference string) (*models.Payment, error) {
+func (s *PaymentService) GetPayment(reference string) (*dto.PaymentResponse, error) {
 	payment, err := s.paymentRepo.GetByReference(reference)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -247,7 +268,7 @@ func (s *PaymentService) GetPayment(reference string) (*models.Payment, error) {
 		)
 	}
 
-	return payment, nil
+	return mapper.ToPaymentResponse(payment), nil
 }
 
 func generateReference() (string, error) {

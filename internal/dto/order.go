@@ -3,8 +3,8 @@ package dto
 import "time"
 
 type CheckoutResponse struct {
-	Order   OrderCheckoutResponse   `json:"order"`
-	Payment PaymentCheckoutResponse `json:"payment"`
+	Order   *OrderCheckoutResponse `json:"order"`
+	Payment *PaymentResponse       `json:"payment"`
 }
 
 type OrderCheckoutResponse struct {
@@ -37,4 +37,8 @@ type OrderResponse struct {
 	Total           float64   `json:"total"`
 	ShippingAddress string    `json:"shipping_address"`
 	CreatedAt       time.Time `json:"created_at"`
+}
+
+type CheckoutRequest struct {
+	ShippingAddress string `json:"shipping_address" binding:"required"`
 }

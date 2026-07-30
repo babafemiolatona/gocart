@@ -24,7 +24,3 @@ type Order struct {
 	CreatedAt       time.Time   `json:"created_at"`
 	UpdatedAt       time.Time   `json:"updated_at"`
 }
-
-type CheckoutRequest struct {
-	ShippingAddress string `json:"shipping_address" binding:"required"`
-}

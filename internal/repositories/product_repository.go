@@ -1,7 +1,9 @@
 package repositories
 
 import (
+	"gocart/internal/dto"
 	"gocart/internal/models"
+	"gocart/internal/query"
 
 	"gorm.io/gorm"
 )
@@ -11,8 +13,8 @@ type ProductRepository interface {
 	GetByID(id uint) (*models.Product, error)
 	GetByIDTx(tx *gorm.DB, id uint) (*models.Product, error)
 	GetAll(
-		query *models.PaginationQuery,
-		filters *models.ProductFilters,
+		query *dto.PaginationQuery,
+		filters *query.ProductFilters,
 	) ([]models.Product, int64, error)
 	Update(product *models.Product) error
 	UpdateTx(tx *gorm.DB, product *models.Product) error
@@ -65,8 +67,8 @@ func (r *productRepository) GetByIDTx(
 }
 
 func (r *productRepository) GetAll(
-	query *models.PaginationQuery,
-	filters *models.ProductFilters,
+	query *dto.PaginationQuery,
+	filters *query.ProductFilters,
 ) ([]models.Product, int64, error) {
 
 	var (

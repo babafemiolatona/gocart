@@ -30,7 +30,7 @@ func NewAuthHandler(authService *services.AuthService) *AuthHandler {
 //	@Failure		400		{object}	errors.ErrorResponse
 //	@Failure		409		{object}	errors.ErrorResponse
 //	@Failure		500		{object}	errors.ErrorResponse
-//	@Router			/auth/register [post]
+//	@Router			/api/v1/auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 
@@ -65,7 +65,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 //	@Failure		400		{object}	errors.ErrorResponse
 //	@Failure		401		{object}	errors.ErrorResponse
 //	@Failure		500		{object}	errors.ErrorResponse
-//	@Router			/auth/login [post]
+//	@Router			/api/v1/auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 

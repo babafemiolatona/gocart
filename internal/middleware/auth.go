@@ -19,14 +19,19 @@ func AuthMiddleware(AuthService *services.AuthService) gin.HandlerFunc {
 			return
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		var tokenString string
+
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			tokenString = strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+		} else {
+			tokenString = strings.TrimSpace(authHeader)
+		}
+
+		if tokenString == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
 			c.Abort()
 			return
 		}
-
-		tokenString := parts[1]
 
 		claims, err := AuthService.VerifyToken(tokenString)
 		if err != nil {
@@ -43,7 +48,6 @@ func AuthMiddleware(AuthService *services.AuthService) gin.HandlerFunc {
 		}
 
 		c.Set("userID", uint(userID))
-		// c.Set("userEmail", claims.Email)
 		c.Set("userRole", claims.Role)
 
 		c.Next()

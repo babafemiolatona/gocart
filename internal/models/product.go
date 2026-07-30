@@ -28,12 +28,3 @@ type ProductImage struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
-
-type ProductFilters struct {
-	CategoryID  uint
-	MerchantID  uint
-	MinPrice    float64
-	MaxPrice    float64
-	InStock     *bool
-	SearchQuery string
-}

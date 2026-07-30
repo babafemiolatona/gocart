@@ -10,10 +10,10 @@ type MerchantRegisterRequest struct {
 }
 
 type UpdateMerchantRequest struct {
-	BusinessName string `json:"business_name" binding:"required,min=3,max=255"`
-	Description  string `json:"description"`
-	Phone        string `json:"phone"`
-	LogoURL      string `json:"logo_url"`
+	BusinessName *string `json:"business_name" binding:"omitempty,min=3,max=255"`
+	Description  *string `json:"description"`
+	Phone        *string `json:"phone"`
+	LogoURL      *string `json:"logo_url"`
 }
 
 type MerchantResponse struct {
