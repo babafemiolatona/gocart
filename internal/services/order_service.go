@@ -213,8 +213,7 @@ func (s *OrderService) GetOrder(orderID uint) (*dto.OrderDetailsResponse, error)
 }
 
 func (s *OrderService) CancelOrder(orderID uint) error {
-	err := s.orderRepo.UpdateOrderStatus(orderID, models.OrderStatusCancelled)
-
+	order, err := s.orderRepo.GetOrderByID(orderID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return apperrors.New(
@@ -227,11 +226,99 @@ func (s *OrderService) CancelOrder(orderID uint) error {
 
 		return apperrors.New(
 			http.StatusInternalServerError,
-			"cancel_order_failed",
-			"failed to cancel order",
+			"fetch_order_failed",
+			"failed to fetch order",
 			err,
 		)
 	}
 
-	return nil
+	if order.Status == models.OrderStatusCancelled {
+		return apperrors.New(
+			http.StatusConflict,
+			"order_already_cancelled",
+			"order has already been cancelled",
+			nil,
+		)
+	}
+
+	if order.Status == models.OrderStatusPendingPayment {
+		if err := s.orderRepo.UpdateOrderStatus(
+			order.ID,
+			models.OrderStatusCancelled,
+		); err != nil {
+			return apperrors.New(
+				http.StatusInternalServerError,
+				"cancel_order_failed",
+				"failed to cancel order",
+				err,
+			)
+		}
+
+		return nil
+	}
+
+	if order.Status == models.OrderStatusConfirmed {
+		err := s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
+
+			for _, item := range order.Items {
+				product, err := s.productRepo.GetByIDTx(tx, item.ProductID)
+				if err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						return apperrors.New(
+							http.StatusNotFound,
+							"product_not_found",
+							"product not found",
+							err,
+						)
+					}
+
+					return apperrors.New(
+						http.StatusInternalServerError,
+						"fetch_product_failed",
+						"failed to fetch product",
+						err,
+					)
+				}
+
+				product.Stock += item.Quantity
+
+				if err := s.productRepo.UpdateTx(tx, product); err != nil {
+					return apperrors.New(
+						http.StatusInternalServerError,
+						"update_product_failed",
+						"failed to update product",
+						err,
+					)
+				}
+			}
+
+			if err := s.orderRepo.UpdateOrderStatusTx(
+				tx,
+				order.ID,
+				models.OrderStatusCancelled,
+			); err != nil {
+				return apperrors.New(
+					http.StatusInternalServerError,
+					"cancel_order_failed",
+					"failed to cancel order",
+					err,
+				)
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	return apperrors.New(
+		http.StatusConflict,
+		"invalid_order_status",
+		"order cannot be cancelled",
+		nil,
+	)
 }
