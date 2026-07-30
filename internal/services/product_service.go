@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
+	"gocart/internal/mapper"
+	"gocart/internal/query"
 	"net/http"
 
 	"gocart/internal/models"
@@ -40,7 +42,7 @@ func (s *ProductService) CreateProduct(
 	merchantID uint,
 	req *dto.CreateProductRequest,
 	images []*multipart.FileHeader,
-) (*models.Product, error) {
+) (*dto.ProductResponse, error) {
 
 	_, err := s.categoryRepo.GetByID(req.CategoryID)
 	if err != nil {
@@ -92,11 +94,26 @@ func (s *ProductService) CreateProduct(
 
 	if len(images) > 0 {
 		if err := s.uploadImages(product.ID, images); err != nil {
-			return nil, err
+			return nil, apperrors.New(
+				http.StatusInternalServerError,
+				"upload_product_images_failed",
+				"failed to upload product images",
+				err,
+			)
 		}
 	}
 
-	return s.productRepo.GetByID(product.ID)
+	product, err = s.productRepo.GetByID(product.ID)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_product_failed",
+			"failed to fetch product",
+			err,
+		)
+	}
+
+	return mapper.ToProductResponse(product), nil
 }
 
 func (s *ProductService) uploadImages(
@@ -140,7 +157,7 @@ func (s *ProductService) uploadImages(
 	return nil
 }
 
-func (s *ProductService) GetProduct(id uint) (*models.Product, error) {
+func (s *ProductService) GetProduct(id uint) (*dto.ProductResponse, error) {
 	product, err := s.productRepo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -160,13 +177,13 @@ func (s *ProductService) GetProduct(id uint) (*models.Product, error) {
 		)
 	}
 
-	return product, nil
+	return mapper.ToProductResponse(product), nil
 }
 
-func (s *ProductService) GetProducts(query *models.PaginationQuery, filters *models.ProductFilters) (*models.PaginatedResponse, error) {
+func (s *ProductService) GetProducts(query *dto.PaginationQuery, filters *query.ProductFilters) (*dto.PaginatedResponse, error) {
 
 	if query == nil {
-		query = &models.PaginationQuery{
+		query = &dto.PaginationQuery{
 			Page:     1,
 			PageSize: 10,
 			Sort:     "created_at",
@@ -197,8 +214,8 @@ func (s *ProductService) GetProducts(query *models.PaginationQuery, filters *mod
 		totalPages++
 	}
 
-	return &models.PaginatedResponse{
-		Data:      products,
+	return &dto.PaginatedResponse{
+		Data:      mapper.ToProductResponses(products),
 		Total:     total,
 		Page:      query.Page,
 		PageSize:  query.PageSize,
@@ -211,7 +228,7 @@ func (s *ProductService) UpdateProduct(
 	merchantID uint,
 	req *dto.UpdateProductRequest,
 	images []*multipart.FileHeader,
-) (*models.Product, error) {
+) (*dto.ProductResponse, error) {
 	product, err := s.productRepo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -288,7 +305,7 @@ func (s *ProductService) UpdateProduct(
 		}
 	}
 
-	return product, nil
+	return mapper.ToProductResponse(product), nil
 }
 
 func (s *ProductService) DeleteProduct(merchantID uint, id uint) error {
@@ -344,7 +361,7 @@ func (s *ProductService) DeleteProduct(merchantID uint, id uint) error {
 func (s *ProductService) GetMerchantProduct(
 	merchantID uint,
 	productID uint,
-) (*models.Product, error) {
+) (*dto.ProductResponse, error) {
 
 	product, err := s.productRepo.GetByID(productID)
 	if err != nil {
@@ -374,5 +391,5 @@ func (s *ProductService) GetMerchantProduct(
 		)
 	}
 
-	return product, nil
+	return mapper.ToProductResponse(product), nil
 }

@@ -35,8 +35,8 @@ func ToOrderDetailsResponse(order *models.Order) *dto.OrderDetailsResponse {
 	}
 }
 
-func ToOrderCheckoutResponse(order *models.Order) dto.OrderCheckoutResponse {
-	return dto.OrderCheckoutResponse{
+func ToOrderCheckoutResponse(order *models.Order) *dto.OrderCheckoutResponse {
+	return &dto.OrderCheckoutResponse{
 		ID:              order.ID,
 		Status:          string(order.Status),
 		Total:           order.Total,

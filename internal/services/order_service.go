@@ -9,7 +9,6 @@ import (
 	"gocart/internal/repositories"
 	"net/http"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -111,6 +110,16 @@ func (s *OrderService) ProcessCheckout(
 		})
 	}
 
+	reference, err := generateReference()
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"generate_reference_failed",
+			"failed to generate payment reference",
+			err,
+		)
+	}
+
 	var payment *models.Payment
 
 	err = s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
@@ -126,7 +135,7 @@ func (s *OrderService) ProcessCheckout(
 
 		payment = &models.Payment{
 			OrderID:   order.ID,
-			Reference: uuid.NewString(),
+			Reference: reference,
 			Amount:    order.Total,
 			Status:    models.PaymentStatusPending,
 			Provider:  "mock",
@@ -150,7 +159,7 @@ func (s *OrderService) ProcessCheckout(
 
 	return &dto.CheckoutResponse{
 		Order:   mapper.ToOrderCheckoutResponse(order),
-		Payment: mapper.ToPaymentCheckoutResponse(payment),
+		Payment: mapper.ToPaymentResponse(payment),
 	}, nil
 }
 

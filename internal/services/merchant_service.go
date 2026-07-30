@@ -141,10 +141,21 @@ func (s *MerchantService) UpdateProfile(
 		)
 	}
 
-	merchant.BusinessName = req.BusinessName
-	merchant.Description = req.Description
-	merchant.Phone = req.Phone
-	merchant.LogoURL = req.LogoURL
+	if req.BusinessName != nil {
+		merchant.BusinessName = *req.BusinessName
+	}
+
+	if req.Description != nil {
+		merchant.Description = *req.Description
+	}
+
+	if req.Phone != nil {
+		merchant.Phone = *req.Phone
+	}
+
+	if req.LogoURL != nil {
+		merchant.LogoURL = *req.LogoURL
+	}
 
 	if err := s.merchantRepo.Update(merchant); err != nil {
 		return nil, apperrors.New(
