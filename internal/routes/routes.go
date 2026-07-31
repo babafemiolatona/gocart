@@ -86,6 +86,7 @@ func SetupRoutes(
 		merchantService := services.NewMerchantService(
 			merchantRepo,
 			authRepo,
+			orderRepo,
 		)
 
 		userService := services.NewUserService(userRepo)
@@ -185,6 +186,13 @@ func SetupRoutes(
 					products.POST("", productHandler.CreateProduct)
 					products.PUT("/:id", productHandler.UpdateProduct)
 					products.DELETE("/:id", productHandler.DeleteProduct)
+				}
+
+				orders := merchantProtected.Group("/orders")
+				{
+					orders.GET("", merchantHandler.GetOrders)
+					orders.GET("/:id", merchantHandler.GetOrder)
+					orders.PATCH("/:id/status", merchantHandler.UpdateOrderStatus)
 				}
 			}
 		}

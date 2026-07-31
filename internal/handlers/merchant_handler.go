@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
@@ -145,4 +146,140 @@ func (h *MerchantHandler) UpdateMe(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, merchant)
+}
+
+// GetOrders godoc
+//
+//	@Summary		Get merchant orders
+//	@Description	Get all orders for the authenticated merchant
+//	@Tags			Merchant Orders
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Success		200	{array}		dto.MerchantOrderResponse
+//	@Failure		401	{object}	errors.ErrorResponse
+//	@Failure		403	{object}	errors.ErrorResponse
+//	@Failure		404	{object}	errors.ErrorResponse
+//	@Failure		500	{object}	errors.ErrorResponse
+//	@Router			/api/v1/merchants/orders [get]
+func (h *MerchantHandler) GetOrders(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	orders, err := h.merchantService.GetOrders(userID)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, orders)
+}
+
+// GetOrder godoc
+//
+//	@Summary		Get merchant order
+//	@Description	Get a single order belonging to the authenticated merchant
+//	@Tags			Merchant Orders
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		int	true	"Order ID"
+//	@Success		200	{object}	dto.MerchantOrderResponse
+//	@Failure		400	{object}	errors.ErrorResponse
+//	@Failure		401	{object}	errors.ErrorResponse
+//	@Failure		403	{object}	errors.ErrorResponse
+//	@Failure		404	{object}	errors.ErrorResponse
+//	@Failure		500	{object}	errors.ErrorResponse
+//	@Router			/api/v1/merchants/orders/{id} [get]
+func (h *MerchantHandler) GetOrder(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	orderID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_order_id",
+			"invalid order id",
+			err,
+		))
+		return
+	}
+
+	order, err := h.merchantService.GetOrder(
+		userID,
+		uint(orderID),
+	)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, order)
+}
+
+// UpdateOrderStatus godoc
+//
+//	@Summary		Update merchant order status
+//	@Description	Update the status of an order belonging to the authenticated merchant
+//	@Tags			Merchant Orders
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int								true	"Order ID"
+//	@Param			request	body		dto.UpdateOrderStatusRequest		true	"Order status"
+//	@Success		200		{object}	map[string]string
+//	@Failure		400		{object}	errors.ErrorResponse
+//	@Failure		401		{object}	errors.ErrorResponse
+//	@Failure		403		{object}	errors.ErrorResponse
+//	@Failure		404		{object}	errors.ErrorResponse
+//	@Failure		500		{object}	errors.ErrorResponse
+//	@Router			/api/v1/merchants/orders/{id}/status [patch]
+func (h *MerchantHandler) UpdateOrderStatus(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	orderID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"invalid_order_id",
+			"invalid order id",
+			err,
+		))
+		return
+	}
+
+	var req dto.UpdateOrderStatusRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(apperrors.New(
+			http.StatusBadRequest,
+			"validation_error",
+			err.Error(),
+			err,
+		))
+		return
+	}
+
+	err = h.merchantService.UpdateOrderStatus(
+		userID,
+		uint(orderID),
+		&req,
+	)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "order status updated successfully",
+	})
 }

@@ -16,16 +16,42 @@ import (
 type MerchantService struct {
 	merchantRepo repositories.MerchantRepository
 	userRepo     repositories.AuthRepository
+	orderRepo    repositories.OrderRepository
 }
 
 func NewMerchantService(
 	merchantRepo repositories.MerchantRepository,
 	authRepo repositories.AuthRepository,
+	orderRepo repositories.OrderRepository,
 ) *MerchantService {
 	return &MerchantService{
 		merchantRepo: merchantRepo,
 		userRepo:     authRepo,
+		orderRepo:    orderRepo,
 	}
+}
+
+func (s *MerchantService) getMerchant(userID uint) (*models.Merchant, error) {
+	merchant, err := s.merchantRepo.GetByUserID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(
+				http.StatusNotFound,
+				"merchant_not_found",
+				"merchant profile not found",
+				err,
+			)
+		}
+
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_merchant_failed",
+			"failed to fetch merchant profile",
+			err,
+		)
+	}
+
+	return merchant, nil
 }
 
 func (s *MerchantService) RegisterMerchant(
@@ -167,4 +193,129 @@ func (s *MerchantService) UpdateProfile(
 	}
 
 	return mapper.ToMerchantResponse(merchant), nil
+}
+
+func (s *MerchantService) GetOrders(
+	userID uint,
+) ([]dto.MerchantOrderResponse, error) {
+
+	merchant, err := s.getMerchant(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	orders, err := s.orderRepo.GetOrdersByMerchantID(merchant.ID)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_orders_failed",
+			"failed to fetch orders",
+			err,
+		)
+	}
+
+	return mapper.ToMerchantOrderResponses(orders), nil
+}
+
+func (s *MerchantService) GetOrder(
+	userID uint,
+	orderID uint,
+) (*dto.MerchantOrderResponse, error) {
+
+	merchant, err := s.getMerchant(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	order, err := s.orderRepo.GetMerchantOrderByID(merchant.ID, orderID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(
+				http.StatusNotFound,
+				"order_not_found",
+				"order not found",
+				err,
+			)
+		}
+
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_order_failed",
+			"failed to fetch order",
+			err,
+		)
+	}
+
+	return mapper.ToMerchantOrderResponse(order), nil
+}
+
+func (s *MerchantService) UpdateOrderStatus(
+	userID uint,
+	orderID uint,
+	req *dto.UpdateOrderStatusRequest,
+) error {
+
+	merchant, err := s.getMerchant(userID)
+	if err != nil {
+		return err
+	}
+
+	order, err := s.orderRepo.GetMerchantOrderByID(
+		merchant.ID,
+		orderID,
+	)
+	if err != nil {
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return apperrors.New(
+				http.StatusNotFound,
+				"order_not_found",
+				"order not found",
+				err,
+			)
+		}
+
+		return apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_order_failed",
+			"failed to fetch order",
+			err,
+		)
+	}
+
+	switch req.Status {
+
+	case models.OrderStatusShipped:
+
+		if order.Status != models.OrderStatusConfirmed {
+			return apperrors.New(
+				http.StatusBadRequest,
+				"invalid_order_status",
+				"only confirmed orders can be shipped",
+				nil,
+			)
+		}
+
+	case models.OrderStatusDelivered:
+
+		if order.Status != models.OrderStatusShipped {
+			return apperrors.New(
+				http.StatusBadRequest,
+				"invalid_order_status",
+				"only shipped orders can be marked as delivered",
+				nil,
+			)
+		}
+
+	default:
+
+		return apperrors.New(
+			http.StatusBadRequest,
+			"invalid_order_status",
+			"invalid order status",
+			nil,
+		)
+	}
+
+	return s.orderRepo.UpdateOrderStatus(orderID, req.Status)
 }

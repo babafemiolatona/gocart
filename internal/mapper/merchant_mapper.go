@@ -17,3 +17,41 @@ func ToMerchantResponse(merchant *models.Merchant) *dto.MerchantResponse {
 		UpdatedAt:    merchant.UpdatedAt,
 	}
 }
+
+func ToMerchantOrderItemResponse(item models.OrderItem) dto.MerchantOrderItemResponse {
+	return dto.MerchantOrderItemResponse{
+		ID:          item.ID,
+		ProductID:   item.ProductID,
+		ProductName: item.ProductName,
+		Quantity:    item.Quantity,
+		Price:       item.Price,
+	}
+}
+
+func ToMerchantOrderResponse(order *models.Order) *dto.MerchantOrderResponse {
+	items := make([]dto.MerchantOrderItemResponse, 0, len(order.Items))
+
+	for _, item := range order.Items {
+		items = append(items, ToMerchantOrderItemResponse(item))
+	}
+
+	return &dto.MerchantOrderResponse{
+		ID:              order.ID,
+		Status:          string(order.Status),
+		Total:           order.Total,
+		ShippingAddress: order.ShippingAddress,
+		CreatedAt:       order.CreatedAt,
+		UpdatedAt:       order.UpdatedAt,
+		Items:           items,
+	}
+}
+
+func ToMerchantOrderResponses(orders []models.Order) []dto.MerchantOrderResponse {
+	responses := make([]dto.MerchantOrderResponse, 0, len(orders))
+
+	for _, order := range orders {
+		responses = append(responses, *ToMerchantOrderResponse(&order))
+	}
+
+	return responses
+}

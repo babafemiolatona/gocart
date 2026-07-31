@@ -104,6 +104,19 @@ func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.Ca
 		return nil, err
 	}
 
+	if len(cart.Items) > 0 {
+		existingMerchantID := cart.Items[0].Product.MerchantID
+
+		if existingMerchantID != product.MerchantID {
+			return nil, apperrors.New(
+				http.StatusConflict,
+				"multiple_merchants_not_supported",
+				"you can only add products from one merchant to your cart",
+				nil,
+			)
+		}
+	}
+
 	var existing *models.CartItem
 
 	for i := range cart.Items {

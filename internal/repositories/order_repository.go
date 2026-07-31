@@ -15,6 +15,8 @@ type OrderRepository interface {
 	UpdateOrderStatus(orderID uint, status models.OrderStatus) error
 	UpdateOrderStatusTx(tx *gorm.DB, orderID uint, status models.OrderStatus) error
 	WithTransaction(fn func(tx *gorm.DB) error) error
+	GetOrdersByMerchantID(merchantID uint) ([]models.Order, error)
+	GetMerchantOrderByID(merchantID uint, orderID uint) (*models.Order, error)
 }
 
 type orderRepository struct {
@@ -115,4 +117,51 @@ func (r *orderRepository) WithTransaction(fn func(tx *gorm.DB) error) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		return fn(tx)
 	})
+}
+
+func (r *orderRepository) GetOrdersByMerchantID(
+	merchantID uint,
+) ([]models.Order, error) {
+
+	var orders []models.Order
+
+	err := r.db.
+		Distinct("orders.*").
+		Joins("JOIN order_items ON order_items.order_id = orders.id").
+		Joins("JOIN products ON products.id = order_items.product_id").
+		Where("products.merchant_id = ?", merchantID).
+		Preload("User").
+		Preload("Items").
+		Order("orders.created_at DESC").
+		Find(&orders).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+func (r *orderRepository) GetMerchantOrderByID(
+	merchantID uint,
+	orderID uint,
+) (*models.Order, error) {
+
+	var order models.Order
+
+	err := r.db.
+		Distinct("orders.*").
+		Joins("JOIN order_items ON order_items.order_id = orders.id").
+		Joins("JOIN products ON products.id = order_items.product_id").
+		Where("orders.id = ?", orderID).
+		Where("products.merchant_id = ?", merchantID).
+		Preload("User").
+		Preload("Items").
+		First(&order).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &order, nil
 }
