@@ -20,6 +20,8 @@ type ProductRepository interface {
 	UpdateTx(tx *gorm.DB, product *models.Product) error
 	Delete(id uint) error
 	GetBySku(sku string) (*models.Product, error)
+	CountByMerchant(merchantID uint) (int64, error)
+	CountLowStockByMerchant(merchantID uint, threshold int) (int64, error)
 }
 
 type productRepository struct {
@@ -207,4 +209,31 @@ func (r *productRepository) GetBySku(sku string) (*models.Product, error) {
 	}
 
 	return product, nil
+}
+
+func (r *productRepository) CountByMerchant(merchantID uint) (int64, error) {
+	var count int64
+
+	if err := r.db.
+		Model(&models.Product{}).
+		Where("merchant_id = ?", merchantID).
+		Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *productRepository) CountLowStockByMerchant(merchantID uint, threshold int) (int64, error) {
+
+	var count int64
+
+	if err := r.db.
+		Model(&models.Product{}).
+		Where("merchant_id = ? AND stock <= ?", merchantID, threshold).
+		Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

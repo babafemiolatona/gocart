@@ -283,3 +283,32 @@ func (h *MerchantHandler) UpdateOrderStatus(c *gin.Context) {
 		"message": "order status updated successfully",
 	})
 }
+
+// GetDashboard godoc
+//
+//	@Summary		Get merchant dashboard
+//	@Description	Get dashboard metrics for the authenticated merchant
+//	@Tags			Merchants
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Success		200	{object}	dto.MerchantDashboardResponse
+//	@Failure		401	{object}	errors.ErrorResponse
+//	@Failure		403	{object}	errors.ErrorResponse
+//	@Failure		404	{object}	errors.ErrorResponse
+//	@Failure		500	{object}	errors.ErrorResponse
+//	@Router			/api/v1/merchants/dashboard [get]
+func (h *MerchantHandler) GetDashboard(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	dashboard, err := h.merchantService.GetDashboard(userID)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, dashboard)
+}

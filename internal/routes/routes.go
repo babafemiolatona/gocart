@@ -87,6 +87,7 @@ func SetupRoutes(
 			merchantRepo,
 			authRepo,
 			orderRepo,
+			productRepo,
 		)
 
 		userService := services.NewUserService(userRepo)
@@ -176,6 +177,8 @@ func SetupRoutes(
 				middleware.RequireMerchant(merchantRepo),
 			)
 			{
+				merchantProtected.GET("/dashboard", merchantHandler.GetDashboard)
+
 				merchantProtected.GET("/me", merchantHandler.GetMe)
 				merchantProtected.PUT("/me", merchantHandler.UpdateMe)
 

@@ -55,3 +55,33 @@ func ToMerchantOrderResponses(orders []models.Order) []dto.MerchantOrderResponse
 
 	return responses
 }
+
+func ToMerchantRecentOrderResponse(order models.Order) dto.MerchantRecentOrderResponse {
+
+	return dto.MerchantRecentOrderResponse{
+		ID:        order.ID,
+		Customer:  order.User.Email,
+		Status:    order.Status,
+		Total:     order.Total,
+		ItemCount: len(order.Items),
+		CreatedAt: order.CreatedAt,
+	}
+}
+
+func ToMerchantRecentOrderResponses(orders []models.Order) []dto.MerchantRecentOrderResponse {
+
+	responses := make(
+		[]dto.MerchantRecentOrderResponse,
+		0,
+		len(orders),
+	)
+
+	for _, order := range orders {
+		responses = append(
+			responses,
+			ToMerchantRecentOrderResponse(order),
+		)
+	}
+
+	return responses
+}

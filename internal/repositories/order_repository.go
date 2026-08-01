@@ -17,6 +17,11 @@ type OrderRepository interface {
 	WithTransaction(fn func(tx *gorm.DB) error) error
 	GetOrdersByMerchantID(merchantID uint) ([]models.Order, error)
 	GetMerchantOrderByID(merchantID uint, orderID uint) (*models.Order, error)
+
+	CountByMerchant(merchantID uint) (int64, error)
+	CountByMerchantAndStatus(merchantID uint, status models.OrderStatus) (int64, error)
+	SumRevenueByMerchant(merchantID uint) (float64, error)
+	GetRecentOrdersByMerchant(merchantID uint, limit int) ([]models.Order, error)
 }
 
 type orderRepository struct {
@@ -164,4 +169,82 @@ func (r *orderRepository) GetMerchantOrderByID(
 	}
 
 	return &order, nil
+}
+
+func (r *orderRepository) CountByMerchant(merchantID uint) (int64, error) {
+	var count int64
+
+	err := r.db.
+		Model(&models.Order{}).
+		Joins("JOIN order_items ON order_items.order_id = orders.id").
+		Joins("JOIN products ON products.id = order_items.product_id").
+		Where("products.merchant_id = ?", merchantID).
+		Count(&count).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *orderRepository) CountByMerchantAndStatus(merchantID uint, status models.OrderStatus) (int64, error) {
+
+	var count int64
+
+	err := r.db.
+		Model(&models.Order{}).
+		Joins("JOIN order_items ON order_items.order_id = orders.id").
+		Joins("JOIN products ON products.id = order_items.product_id").
+		Where("products.merchant_id = ?", merchantID).
+		Where("orders.status = ?", status).
+		Count(&count).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *orderRepository) SumRevenueByMerchant(merchantID uint) (float64, error) {
+
+	var total float64
+
+	err := r.db.
+		Model(&models.Order{}).
+		Select("COALESCE(SUM(orders.total), 0)").
+		Joins("JOIN order_items ON order_items.order_id = orders.id").
+		Joins("JOIN products ON products.id = order_items.product_id").
+		Where("products.merchant_id = ?", merchantID).
+		Where("orders.status = ?", models.OrderStatusDelivered).
+		Scan(&total).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
+func (r *orderRepository) GetRecentOrdersByMerchant(merchantID uint, limit int) ([]models.Order, error) {
+
+	var orders []models.Order
+
+	err := r.db.
+		Distinct("orders.*").
+		Joins("JOIN order_items ON order_items.order_id = orders.id").
+		Joins("JOIN products ON products.id = order_items.product_id").
+		Where("products.merchant_id = ?", merchantID).
+		Order("orders.created_at DESC").
+		Limit(limit).
+		Preload("User").
+		Preload("Items").
+		Find(&orders).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
 }

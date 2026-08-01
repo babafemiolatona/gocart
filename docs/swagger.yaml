@@ -98,6 +98,25 @@ definitions:
     - password
     - username_or_email
     type: object
+  dto.MerchantDashboardResponse:
+    properties:
+      completed_orders:
+        type: integer
+      low_stock_products:
+        type: integer
+      pending_orders:
+        type: integer
+      recent_orders:
+        items:
+          $ref: '#/definitions/dto.MerchantRecentOrderResponse'
+        type: array
+      total_orders:
+        type: integer
+      total_products:
+        type: integer
+      total_revenue:
+        type: number
+    type: object
   dto.MerchantOrderItemResponse:
     properties:
       id:
@@ -129,6 +148,21 @@ definitions:
         type: number
       updated_at:
         type: string
+    type: object
+  dto.MerchantRecentOrderResponse:
+    properties:
+      created_at:
+        type: string
+      customer:
+        type: string
+      id:
+        type: integer
+      item_count:
+        type: integer
+      status:
+        $ref: '#/definitions/models.OrderStatus'
+      total:
+        type: number
     type: object
   dto.MerchantRegisterRequest:
     properties:
@@ -780,6 +814,37 @@ paths:
       summary: Get category
       tags:
       - Categories
+  /api/v1/merchants/dashboard:
+    get:
+      description: Get dashboard metrics for the authenticated merchant
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MerchantDashboardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get merchant dashboard
+      tags:
+      - Merchants
   /api/v1/merchants/me:
     get:
       description: Get the authenticated merchant profile

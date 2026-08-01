@@ -17,17 +17,20 @@ type MerchantService struct {
 	merchantRepo repositories.MerchantRepository
 	userRepo     repositories.AuthRepository
 	orderRepo    repositories.OrderRepository
+	productRepo  repositories.ProductRepository
 }
 
 func NewMerchantService(
 	merchantRepo repositories.MerchantRepository,
 	authRepo repositories.AuthRepository,
 	orderRepo repositories.OrderRepository,
+	productRepo repositories.ProductRepository,
 ) *MerchantService {
 	return &MerchantService{
 		merchantRepo: merchantRepo,
 		userRepo:     authRepo,
 		orderRepo:    orderRepo,
+		productRepo:  productRepo,
 	}
 }
 
@@ -312,10 +315,112 @@ func (s *MerchantService) UpdateOrderStatus(
 		return apperrors.New(
 			http.StatusBadRequest,
 			"invalid_order_status",
-			"invalid order status",
+			"merchant can only update an order to 'shipped' or 'delivered'",
 			nil,
 		)
 	}
 
 	return s.orderRepo.UpdateOrderStatus(orderID, req.Status)
+}
+
+func (s *MerchantService) GetDashboard(
+	userID uint,
+) (*dto.MerchantDashboardResponse, error) {
+
+	merchant, err := s.getMerchant(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	totalProducts, err := s.productRepo.CountByMerchant(merchant.ID)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_dashboard_failed",
+			"failed to fetch dashboard",
+			err,
+		)
+	}
+
+	lowStockProducts, err := s.productRepo.CountLowStockByMerchant(
+		merchant.ID,
+		5,
+	)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_dashboard_failed",
+			"failed to fetch dashboard",
+			err,
+		)
+	}
+
+	totalOrders, err := s.orderRepo.CountByMerchant(merchant.ID)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_dashboard_failed",
+			"failed to fetch dashboard",
+			err,
+		)
+	}
+
+	pendingOrders, err := s.orderRepo.CountByMerchantAndStatus(
+		merchant.ID,
+		models.OrderStatusConfirmed,
+	)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_dashboard_failed",
+			"failed to fetch dashboard",
+			err,
+		)
+	}
+
+	completedOrders, err := s.orderRepo.CountByMerchantAndStatus(
+		merchant.ID,
+		models.OrderStatusDelivered,
+	)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_dashboard_failed",
+			"failed to fetch dashboard",
+			err,
+		)
+	}
+
+	totalRevenue, err := s.orderRepo.SumRevenueByMerchant(merchant.ID)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_dashboard_failed",
+			"failed to fetch dashboard",
+			err,
+		)
+	}
+
+	recentOrders, err := s.orderRepo.GetRecentOrdersByMerchant(
+		merchant.ID,
+		5,
+	)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_dashboard_failed",
+			"failed to fetch dashboard",
+			err,
+		)
+	}
+
+	return &dto.MerchantDashboardResponse{
+		TotalProducts:    totalProducts,
+		TotalOrders:      totalOrders,
+		PendingOrders:    pendingOrders,
+		CompletedOrders:  completedOrders,
+		TotalRevenue:     totalRevenue,
+		LowStockProducts: lowStockProducts,
+		RecentOrders:     mapper.ToMerchantRecentOrderResponses(recentOrders),
+	}, nil
 }
