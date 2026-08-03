@@ -46,7 +46,13 @@ func (h *PaymentHandler) ProcessPayment(c *gin.Context) {
 		return
 	}
 
-	payment, err := h.paymentService.ProcessPayment(reference)
+	userID, err := getUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	payment, err := h.paymentService.ProcessPayment(userID, reference)
 	if err != nil {
 		c.Error(err)
 		return
@@ -81,7 +87,13 @@ func (h *PaymentHandler) GetPayment(c *gin.Context) {
 		return
 	}
 
-	payment, err := h.paymentService.GetPayment(reference)
+	userID, err := getUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	payment, err := h.paymentService.GetPayment(userID, reference)
 	if err != nil {
 		c.Error(err)
 		return

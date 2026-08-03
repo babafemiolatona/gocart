@@ -115,7 +115,13 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 		return
 	}
 
-	order, err := h.orderService.GetOrder(uint(orderID))
+	userID, err := getUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	order, err := h.orderService.GetOrder(userID, uint(orderID))
 	if err != nil {
 		c.Error(err)
 		return
@@ -152,7 +158,13 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 
-	err = h.orderService.CancelOrder(uint(orderID))
+	userID, err := getUserID(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	err = h.orderService.CancelOrder(userID, uint(orderID))
 	if err != nil {
 		c.Error(err)
 		return

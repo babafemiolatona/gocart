@@ -86,7 +86,7 @@ func (s *PaymentService) InitiatePayment(orderID uint) (*dto.PaymentResponse, er
 	return mapper.ToPaymentResponse(payment), nil
 }
 
-func (s *PaymentService) ProcessPayment(reference string) (*dto.PaymentResponse, error) {
+func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.PaymentResponse, error) {
 	payment, err := s.paymentRepo.GetByReference(reference)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -106,11 +106,6 @@ func (s *PaymentService) ProcessPayment(reference string) (*dto.PaymentResponse,
 		)
 	}
 
-	// Idempotency
-	if payment.Status == models.PaymentStatusSucceeded {
-		return mapper.ToPaymentResponse(payment), nil
-	}
-
 	order, err := s.orderRepo.GetOrderByID(payment.OrderID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -128,6 +123,20 @@ func (s *PaymentService) ProcessPayment(reference string) (*dto.PaymentResponse,
 			"failed to fetch order",
 			err,
 		)
+	}
+
+	if order.UserID != userID {
+		return nil, apperrors.New(
+			http.StatusNotFound,
+			"payment_not_found",
+			"payment not found",
+			nil,
+		)
+	}
+
+	// Idempotency
+	if payment.Status == models.PaymentStatusSucceeded {
+		return mapper.ToPaymentResponse(payment), nil
 	}
 
 	cart, err := s.cartRepo.GetWithItems(order.UserID)
@@ -248,7 +257,7 @@ func (s *PaymentService) ProcessPayment(reference string) (*dto.PaymentResponse,
 	return mapper.ToPaymentResponse(payment), nil
 }
 
-func (s *PaymentService) GetPayment(reference string) (*dto.PaymentResponse, error) {
+func (s *PaymentService) GetPayment(userID uint, reference string) (*dto.PaymentResponse, error) {
 	payment, err := s.paymentRepo.GetByReference(reference)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -265,6 +274,25 @@ func (s *PaymentService) GetPayment(reference string) (*dto.PaymentResponse, err
 			"fetch_payment_failed",
 			"failed to fetch payment",
 			err,
+		)
+	}
+
+	order, err := s.orderRepo.GetOrderByID(payment.OrderID)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusNotFound,
+			"payment_not_found",
+			"payment not found",
+			err,
+		)
+	}
+
+	if order.UserID != userID {
+		return nil, apperrors.New(
+			http.StatusNotFound,
+			"payment_not_found",
+			"payment not found",
+			nil,
 		)
 	}
 

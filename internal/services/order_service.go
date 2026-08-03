@@ -189,7 +189,7 @@ func (s *OrderService) GetUserOrders(userID uint) ([]dto.OrderResponse, error) {
 
 }
 
-func (s *OrderService) GetOrder(orderID uint) (*dto.OrderDetailsResponse, error) {
+func (s *OrderService) GetOrder(userID, orderID uint) (*dto.OrderDetailsResponse, error) {
 	order, err := s.orderRepo.GetOrderByID(orderID)
 	if err != nil {
 		return nil, apperrors.New(
@@ -197,6 +197,15 @@ func (s *OrderService) GetOrder(orderID uint) (*dto.OrderDetailsResponse, error)
 			"order_not_found",
 			"order not found",
 			err,
+		)
+	}
+
+	if order.UserID != userID {
+		return nil, apperrors.New(
+			http.StatusNotFound,
+			"order_not_found",
+			"order not found",
+			nil,
 		)
 	}
 
@@ -212,7 +221,7 @@ func (s *OrderService) GetOrder(orderID uint) (*dto.OrderDetailsResponse, error)
 	return response, nil
 }
 
-func (s *OrderService) CancelOrder(orderID uint) error {
+func (s *OrderService) CancelOrder(userID, orderID uint) error {
 	order, err := s.orderRepo.GetOrderByID(orderID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -229,6 +238,15 @@ func (s *OrderService) CancelOrder(orderID uint) error {
 			"fetch_order_failed",
 			"failed to fetch order",
 			err,
+		)
+	}
+
+	if order.UserID != userID {
+		return apperrors.New(
+			http.StatusNotFound,
+			"order_not_found",
+			"order not found",
+			nil,
 		)
 	}
 
