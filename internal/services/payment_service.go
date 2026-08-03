@@ -153,8 +153,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 
 		for _, item := range cart.Items {
 
-			product, err := s.productRepo.GetByIDTx(tx, item.ProductID)
-			if err != nil {
+			if err := s.productRepo.DecrementStockTx(tx, item.ProductID, item.Quantity); err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return apperrors.New(
 						http.StatusNotFound,
@@ -164,28 +163,15 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 					)
 				}
 
-				return apperrors.New(
-					http.StatusInternalServerError,
-					"fetch_product_failed",
-					"failed to fetch product",
-					err,
-				)
-			}
+				if errors.Is(err, repositories.ErrInsufficientStock) {
+					return apperrors.New(
+						http.StatusConflict,
+						"insufficient_stock",
+						"insufficient stock",
+						err,
+					)
+				}
 
-			if product.Stock < item.Quantity {
-				return apperrors.New(
-					http.StatusConflict,
-					"insufficient_stock",
-					"insufficient stock",
-					nil,
-				)
-			}
-
-			product.Stock -= item.Quantity
-
-			if err := s.productRepo.UpdateTx(tx, product.ID, map[string]interface{}{
-				"stock": product.Stock,
-			}); err != nil {
 				return apperrors.New(
 					http.StatusInternalServerError,
 					"update_product_failed",

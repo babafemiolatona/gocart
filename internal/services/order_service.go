@@ -279,8 +279,8 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 		err := s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
 
 			for _, item := range order.Items {
-				product, err := s.productRepo.GetByIDTx(tx, item.ProductID)
-				if err != nil {
+
+				if err := s.productRepo.IncrementStockTx(tx, item.ProductID, item.Quantity); err != nil {
 					if errors.Is(err, gorm.ErrRecordNotFound) {
 						return apperrors.New(
 							http.StatusNotFound,
@@ -290,19 +290,6 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 						)
 					}
 
-					return apperrors.New(
-						http.StatusInternalServerError,
-						"fetch_product_failed",
-						"failed to fetch product",
-						err,
-					)
-				}
-
-				product.Stock += item.Quantity
-
-				if err := s.productRepo.UpdateTx(tx, product.ID, map[string]interface{}{
-					"stock": product.Stock,
-				}); err != nil {
 					return apperrors.New(
 						http.StatusInternalServerError,
 						"update_product_failed",

@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"errors"
+
 	"gocart/internal/dto"
 	"gocart/internal/models"
 	"gocart/internal/query"
@@ -8,17 +10,19 @@ import (
 	"gorm.io/gorm"
 )
 
+var ErrInsufficientStock = errors.New("insufficient stock")
+
 type ProductRepository interface {
 	Create(product *models.Product) error
 	GetByID(id uint) (*models.Product, error)
-	GetByIDTx(tx *gorm.DB, id uint) (*models.Product, error)
 	GetAll(
 		query *dto.PaginationQuery,
 		filters *query.ProductFilters,
 	) ([]models.Product, int64, error)
 	Update(id uint, values map[string]interface{}) error
-	UpdateTx(tx *gorm.DB, id uint, values map[string]interface{}) error
 	Delete(id uint) error
+	IncrementStockTx(tx *gorm.DB, id uint, qty int) error
+	DecrementStockTx(tx *gorm.DB, id uint, qty int) error
 	GetBySku(sku string) (*models.Product, error)
 	CountByMerchant(merchantID uint) (int64, error)
 	CountLowStockByMerchant(merchantID uint, threshold int) (int64, error)
@@ -42,23 +46,6 @@ func (r *productRepository) GetByID(id uint) (*models.Product, error) {
 	product := &models.Product{}
 
 	if err := r.db.
-		Preload("Category").
-		Preload("Images").
-		First(product, id).Error; err != nil {
-		return nil, err
-	}
-
-	return product, nil
-}
-
-func (r *productRepository) GetByIDTx(
-	tx *gorm.DB,
-	id uint,
-) (*models.Product, error) {
-
-	product := &models.Product{}
-
-	if err := tx.
 		Preload("Category").
 		Preload("Images").
 		First(product, id).Error; err != nil {
@@ -151,15 +138,59 @@ func (r *productRepository) Update(id uint, values map[string]interface{}) error
 		Updates(values).Error
 }
 
-func (r *productRepository) UpdateTx(
+func (r *productRepository) IncrementStockTx(
 	tx *gorm.DB,
 	id uint,
-	values map[string]interface{},
+	qty int,
 ) error {
-	return tx.
+	result := tx.
 		Model(&models.Product{}).
 		Where("id = ?", id).
-		Updates(values).Error
+		Update("stock", gorm.Expr("stock + ?", qty))
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
+}
+
+func (r *productRepository) DecrementStockTx(
+	tx *gorm.DB,
+	id uint,
+	qty int,
+) error {
+	result := tx.
+		Model(&models.Product{}).
+		Where("id = ? AND stock >= ?", id, qty).
+		Update("stock", gorm.Expr("stock - ?", qty))
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		var exists int64
+
+		if err := tx.
+			Model(&models.Product{}).
+			Where("id = ?", id).
+			Count(&exists).Error; err != nil {
+			return err
+		}
+
+		if exists == 0 {
+			return gorm.ErrRecordNotFound
+		}
+
+		return ErrInsufficientStock
+	}
+
+	return nil
 }
 
 func (r *productRepository) Delete(id uint) error {
