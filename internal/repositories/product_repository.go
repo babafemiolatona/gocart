@@ -16,8 +16,8 @@ type ProductRepository interface {
 		query *dto.PaginationQuery,
 		filters *query.ProductFilters,
 	) ([]models.Product, int64, error)
-	Update(product *models.Product) error
-	UpdateTx(tx *gorm.DB, product *models.Product) error
+	Update(id uint, values map[string]interface{}) error
+	UpdateTx(tx *gorm.DB, id uint, values map[string]interface{}) error
 	Delete(id uint) error
 	GetBySku(sku string) (*models.Product, error)
 	CountByMerchant(merchantID uint) (int64, error)
@@ -144,43 +144,22 @@ func (r *productRepository) GetAll(
 	return products, total, nil
 }
 
-func (r *productRepository) Update(product *models.Product) error {
-
-	result := r.db.
+func (r *productRepository) Update(id uint, values map[string]interface{}) error {
+	return r.db.
 		Model(&models.Product{}).
-		Where("id = ?", product.ID).
-		Updates(product)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-
-	return nil
+		Where("id = ?", id).
+		Updates(values).Error
 }
 
 func (r *productRepository) UpdateTx(
 	tx *gorm.DB,
-	product *models.Product,
+	id uint,
+	values map[string]interface{},
 ) error {
-
-	result := tx.
+	return tx.
 		Model(&models.Product{}).
-		Where("id = ?", product.ID).
-		Updates(product)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-
-	return nil
+		Where("id = ?", id).
+		Updates(values).Error
 }
 
 func (r *productRepository) Delete(id uint) error {

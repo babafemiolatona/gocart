@@ -183,7 +183,9 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 
 			product.Stock -= item.Quantity
 
-			if err := s.productRepo.UpdateTx(tx, product); err != nil {
+			if err := s.productRepo.UpdateTx(tx, product.ID, map[string]interface{}{
+				"stock": product.Stock,
+			}); err != nil {
 				return apperrors.New(
 					http.StatusInternalServerError,
 					"update_product_failed",

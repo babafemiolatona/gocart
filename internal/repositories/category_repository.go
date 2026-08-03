@@ -10,7 +10,7 @@ type CategoryRepository interface {
 	Create(category *models.Category) error
 	GetByID(id uint) (*models.Category, error)
 	GetAll() ([]models.Category, error)
-	Update(category *models.Category) error
+	Update(id uint, values map[string]interface{}) error
 	Delete(id uint) error
 }
 
@@ -44,16 +44,10 @@ func (r *categoryRepository) GetAll() ([]models.Category, error) {
 	return categories, nil
 }
 
-func (r *categoryRepository) Update(category *models.Category) error {
-	result := r.db.Model(&models.Category{}).
-		Where("id = ?", category.ID).
-		Updates(category)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
+func (r *categoryRepository) Update(id uint, values map[string]interface{}) error {
+	return r.db.Model(&models.Category{}).
+		Where("id = ?", id).
+		Updates(values).Error
 }
 
 func (r *categoryRepository) Delete(id uint) error {

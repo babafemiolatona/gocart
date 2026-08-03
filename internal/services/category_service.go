@@ -107,19 +107,24 @@ func (s *CategoryService) UpdateCategory(req *dto.UpdateCategoryRequest, id uint
 		)
 	}
 
+	updates := map[string]interface{}{}
+
 	if req.Name != nil {
 		category.Name = *req.Name
+		updates["name"] = *req.Name
 	}
 
 	if req.Description != nil {
 		category.Description = *req.Description
+		updates["description"] = *req.Description
 	}
 
 	if req.Slug != nil {
 		category.Slug = *req.Slug
+		updates["slug"] = *req.Slug
 	}
 
-	if err := s.categoryRepo.Update(category); err != nil {
+	if err := s.categoryRepo.Update(id, updates); err != nil {
 
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, apperrors.New(

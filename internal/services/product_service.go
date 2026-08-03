@@ -257,45 +257,70 @@ func (s *ProductService) UpdateProduct(
 		)
 	}
 
+	updates := map[string]interface{}{}
+
 	if req.Name != nil {
-		product.Name = *req.Name
+		updates["name"] = *req.Name
 	}
 	if req.Description != nil {
-		product.Description = *req.Description
+		updates["description"] = *req.Description
 	}
 	if req.Price != nil {
-		product.Price = *req.Price
+		updates["price"] = *req.Price
 	}
 	if req.Stock != nil {
-		product.Stock = *req.Stock
+		updates["stock"] = *req.Stock
 	}
-	if req.Sku != nil {
-		product.Sku = *req.Sku
-	}
-	if req.Slug != nil {
-		product.Slug = *req.Slug
-	}
+	if req.CategoryID != nil {
+		if _, err := s.categoryRepo.GetByID(*req.CategoryID); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, apperrors.New(
+					http.StatusNotFound,
+					"category_not_found",
+					"category not found",
+					err,
+				)
+			}
 
-	if err := s.productRepo.Update(product); err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, apperrors.New(
-				http.StatusConflict,
-				"product_exists",
-				"product already exists",
+				http.StatusInternalServerError,
+				"fetch_category_failed",
+				"failed to fetch category",
 				err,
 			)
 		}
 
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"update_product_failed",
-			"failed to update product",
-			err,
-		)
+		updates["category_id"] = *req.CategoryID
+	}
+	if req.Sku != nil {
+		updates["sku"] = *req.Sku
+	}
+	if req.Slug != nil {
+		updates["slug"] = *req.Slug
+	}
+
+	if len(updates) > 0 {
+		if err := s.productRepo.Update(id, updates); err != nil {
+			if errors.Is(err, gorm.ErrDuplicatedKey) {
+				return nil, apperrors.New(
+					http.StatusConflict,
+					"product_exists",
+					"product already exists",
+					err,
+				)
+			}
+
+			return nil, apperrors.New(
+				http.StatusInternalServerError,
+				"update_product_failed",
+				"failed to update product",
+				err,
+			)
+		}
 	}
 
 	if len(images) > 0 {
-		if err := s.uploadImages(product.ID, images); err != nil {
+		if err := s.uploadImages(id, images); err != nil {
 			return nil, apperrors.New(
 				http.StatusInternalServerError,
 				"upload_product_images_failed",
@@ -303,6 +328,16 @@ func (s *ProductService) UpdateProduct(
 				err,
 			)
 		}
+	}
+
+	product, err = s.productRepo.GetByID(id)
+	if err != nil {
+		return nil, apperrors.New(
+			http.StatusInternalServerError,
+			"fetch_product_failed",
+			"failed to fetch product",
+			err,
+		)
 	}
 
 	return mapper.ToProductResponse(product), nil
