@@ -12,8 +12,6 @@ import (
 	"gorm.io/gorm"
 )
 
-var ErrCategoryNotFound = errors.New("category not found")
-
 type CategoryService struct {
 	categoryRepo repositories.CategoryRepository
 }

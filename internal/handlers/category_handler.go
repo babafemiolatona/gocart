@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -103,10 +102,8 @@ func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 
 	category, err := h.categoryService.GetCategoryByID(uint(id))
 	if err != nil {
-		if errors.Is(err, services.ErrCategoryNotFound) {
-			c.Error(err)
-			return
-		}
+		c.Error(err)
+		return
 	}
 
 	c.JSON(http.StatusOK, category)
