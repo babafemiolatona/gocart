@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	apperrors "gocart/internal/errors"
 	"gocart/internal/repositories"
 
 	"github.com/gin-gonic/gin"
@@ -18,18 +19,24 @@ func RequireMerchant(
 
 		userIDValue, exists := c.Get("userID")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "unauthorized",
-			})
+			c.Error(apperrors.New(
+				http.StatusUnauthorized,
+				"unauthorized",
+				"unauthorized",
+				nil,
+			))
 			c.Abort()
 			return
 		}
 
 		userID, ok := userIDValue.(uint)
 		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "unauthorized",
-			})
+			c.Error(apperrors.New(
+				http.StatusUnauthorized,
+				"unauthorized",
+				"unauthorized",
+				nil,
+			))
 			c.Abort()
 			return
 		}
@@ -38,16 +45,22 @@ func RequireMerchant(
 		if err != nil {
 
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusForbidden, gin.H{
-					"error": "merchant account required",
-				})
+				c.Error(apperrors.New(
+					http.StatusForbidden,
+					"merchant_required",
+					"merchant account required",
+					nil,
+				))
 				c.Abort()
 				return
 			}
 
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "failed to verify merchant",
-			})
+			c.Error(apperrors.New(
+				http.StatusInternalServerError,
+				"verify_merchant_failed",
+				"failed to verify merchant",
+				err,
+			))
 			c.Abort()
 			return
 		}

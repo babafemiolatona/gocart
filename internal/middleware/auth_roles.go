@@ -1,8 +1,10 @@
 package middleware
 
 import (
-	"gocart/internal/models"
 	"net/http"
+
+	apperrors "gocart/internal/errors"
+	"gocart/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,7 +14,12 @@ func RequireRole(allowedRoles ...models.Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRoleValue, exists := c.Get("userRole")
 		if !exists {
-			c.JSON(401, gin.H{"error": "unauthorized"})
+			c.Error(apperrors.New(
+				http.StatusUnauthorized,
+				"unauthorized",
+				"unauthorized",
+				nil,
+			))
 			c.Abort()
 			return
 		}
@@ -20,7 +27,12 @@ func RequireRole(allowedRoles ...models.Role) gin.HandlerFunc {
 		userRole, ok := userRoleValue.(models.Role)
 
 		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			c.Error(apperrors.New(
+				http.StatusUnauthorized,
+				"unauthorized",
+				"unauthorized",
+				nil,
+			))
 			c.Abort()
 			return
 		}
@@ -32,7 +44,12 @@ func RequireRole(allowedRoles ...models.Role) gin.HandlerFunc {
 			}
 		}
 
-		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden - insufficient permissions"})
+		c.Error(apperrors.New(
+			http.StatusForbidden,
+			"forbidden",
+			"forbidden - insufficient permissions",
+			nil,
+		))
 		c.Abort()
 	}
 }
