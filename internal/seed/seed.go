@@ -2,9 +2,9 @@ package seed
 
 import (
 	"errors"
+	"gocart/internal/logger"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
-	"log"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -13,7 +13,7 @@ import (
 func SeedAdmin(authRepo repositories.AuthRepository) error {
 	_, err := authRepo.GetByEmail("admin@gocart.com")
 	if err == nil {
-		log.Println("Admin user already exists, skipping seeding")
+		logger.Log.Info().Msg("admin user already exists, skipping seeding")
 		return nil
 	}
 
@@ -42,6 +42,6 @@ func SeedAdmin(authRepo repositories.AuthRepository) error {
 		return err
 	}
 
-	log.Println("Admin user seeded successfully")
+	logger.Log.Info().Msg("admin user seeded successfully")
 	return nil
 }

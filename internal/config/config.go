@@ -1,14 +1,14 @@
 package config
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"gocart/internal/logger"
+
 	"github.com/joho/godotenv"
-	"github.com/rs/zerolog"
 )
 
 type Config struct {
@@ -51,13 +51,12 @@ var CFG *Config
 
 func LoadConfig() {
 	loadEnv()
-	confLogger()
 }
 
 func loadEnv() {
 	if os.Getenv("GO_MODE") != "release" {
 		if err := godotenv.Load(); err != nil {
-			log.Printf("Warning: .env file not found")
+			logger.Log.Warn().Err(err).Msg("warning: .env file not found")
 		}
 	}
 
@@ -87,7 +86,7 @@ func loadEnv() {
 
 	tokenDurationMinutes, err := strconv.Atoi(getEnvOptional("TOKEN_DURATION_MINUTES", "60"))
 	if err != nil {
-		log.Fatalf("Error parsing TOKEN_DURATION_MINUTES: %v", err)
+		logger.Log.Fatal().Err(err).Msg("error parsing TOKEN_DURATION_MINUTES")
 	}
 	CFG.TokenDurationMinutes = tokenDurationMinutes
 
@@ -102,10 +101,6 @@ func loadEnv() {
 	}
 }
 
-func confLogger() {
-	zerolog.TimeFieldFormat = time.RFC3339
-}
-
 func (c *Config) GetDSN() string {
 	return "postgres://" + c.DatabaseUser + ":" + c.DatabasePassword +
 		"@" + c.DatabaseHost + ":" + c.DatabasePort +
@@ -116,7 +111,7 @@ func getEnv(key string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
-	log.Fatalf("Environment variable %s is not set.", key)
+	logger.Log.Fatal().Str("variable", key).Msg("required environment variable is not set")
 	return ""
 }
 
@@ -131,7 +126,7 @@ func getEnvInt(key string) int {
 	value := getEnv(key)
 	intVal, err := strconv.Atoi(value)
 	if err != nil {
-		log.Fatalf("Invalid integer value for %s: %v", key, err)
+		logger.Log.Fatal().Err(err).Str("variable", key).Msg("invalid integer value for environment variable")
 	}
 	return intVal
 }
@@ -139,7 +134,7 @@ func getEnvInt(key string) int {
 func parseDuration(value string) time.Duration {
 	duration, err := time.ParseDuration(value)
 	if err != nil {
-		log.Fatalf("Invalid duration format for %s: %v", value, err)
+		logger.Log.Fatal().Err(err).Str("value", value).Msg("invalid duration format")
 	}
 	return duration
 }

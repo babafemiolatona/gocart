@@ -2,27 +2,26 @@ package repositories
 
 import (
 	"fmt"
-	"log"
-
-	"gocart/internal/models"
 
 	"gocart/internal/config"
+	"gocart/internal/logger"
+	"gocart/internal/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 func InitDB(cfg *config.Config) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(cfg.GetDSN()), &gorm.Config{
-		Logger:         logger.Default.LogMode(logger.Info),
+		Logger:         gormlogger.Default.LogMode(gormlogger.Info),
 		TranslateError: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	log.Println("Database connection successful")
+	logger.Log.Info().Msg("database connection successful")
 
 	if err := db.AutoMigrate(
 		&models.User{},
@@ -39,6 +38,6 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 
-	log.Println("Database migration successful")
+	logger.Log.Info().Msg("database migration successful")
 	return db, nil
 }

@@ -13,9 +13,8 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"log"
-
 	"gocart/internal/config"
+	"gocart/internal/logger"
 	"gocart/internal/repositories"
 	"gocart/internal/routes"
 	"gocart/internal/seed"
@@ -32,13 +31,15 @@ func main() {
 	// Initialize database
 	db, err := repositories.InitDB(config.CFG)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		logger.Log.Fatal().Err(err).Msg("failed to initialize database")
 	}
 
-	log.Printf("Endpoint: %q", config.CFG.MinioEndpoint)
-	log.Printf("AccessKey: %q", config.CFG.MinioAccessKey)
-	log.Printf("Bucket: %q", config.CFG.MinioBucket)
-	log.Printf("UseSSL: %v", config.CFG.MinioUseSSL)
+	logger.Log.Info().
+		Str("endpoint", config.CFG.MinioEndpoint).
+		Str("access_key", config.CFG.MinioAccessKey).
+		Str("bucket", config.CFG.MinioBucket).
+		Bool("use_ssl", config.CFG.MinioUseSSL).
+		Msg("minio configuration")
 
 	// Initialize MinIO
 	minioStorage, err := storage.NewMinioStorage(
@@ -49,14 +50,14 @@ func main() {
 		config.CFG.MinioUseSSL,
 	)
 	if err != nil {
-		log.Fatalf("Failed to initialize MinIO: %v", err)
+		logger.Log.Fatal().Err(err).Msg("failed to initialize minio")
 	}
 
 	// Create service layer
 	authRepo := repositories.NewAuthRepository(db)
 
 	if err := seed.SeedAdmin(authRepo); err != nil {
-		log.Fatalf("failed to seed admin: %v", err)
+		logger.Log.Fatal().Err(err).Msg("failed to seed admin")
 	}
 
 	AuthService := services.NewAuthService(authRepo, config.CFG)
@@ -76,8 +77,8 @@ func main() {
 	routes.SetupRoutes(router, db, AuthService, minioStorage)
 
 	// Start server
-	log.Printf("Starting server on %s", config.CFG.ServerPort)
+	logger.Log.Info().Str("port", config.CFG.ServerPort).Msg("starting server")
 	if err := router.Run(config.CFG.ServerPort); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		logger.Log.Fatal().Err(err).Msg("failed to start server")
 	}
 }

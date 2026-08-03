@@ -3,15 +3,12 @@ package middleware
 import (
 	"errors"
 	"net/http"
-	"os"
 
 	apperrors "gocart/internal/errors"
+	"gocart/internal/logger"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 )
-
-var log = zerolog.New(os.Stderr).With().Timestamp().Logger()
 
 func writeError(c *gin.Context, status int, code, message string) {
 	c.JSON(status, apperrors.ErrorResponse{
@@ -22,6 +19,28 @@ func writeError(c *gin.Context, status int, code, message string) {
 	})
 }
 
+func logError(c *gin.Context, err error) {
+	var appErr *apperrors.AppError
+
+	if errors.As(err, &appErr) {
+		logger.Log.Error().
+			Str("method", c.Request.Method).
+			Str("path", c.Request.URL.Path).
+			Int("status", appErr.Status).
+			Str("code", appErr.Code).
+			Str("message", appErr.Message).
+			Err(appErr.Err).
+			Msg("request failed")
+		return
+	}
+
+	logger.Log.Error().
+		Str("method", c.Request.Method).
+		Str("path", c.Request.URL.Path).
+		Err(err).
+		Msg("request failed")
+}
+
 func ErrorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
@@ -30,28 +49,17 @@ func ErrorHandler() gin.HandlerFunc {
 			return
 		}
 
+		for _, entry := range c.Errors {
+			logError(c, entry.Err)
+		}
+
 		err := c.Errors.Last().Err
 
 		var appErr *apperrors.AppError
 		if errors.As(err, &appErr) {
-			log.Error().
-				Str("method", c.Request.Method).
-				Str("path", c.Request.URL.Path).
-				Int("status", appErr.Status).
-				Str("code", appErr.Code).
-				Str("message", appErr.Message).
-				Err(appErr.Err).
-				Msg("request failed")
-
 			writeError(c, appErr.Status, appErr.Code, appErr.Message)
 			return
 		}
-
-		log.Error().
-			Str("method", c.Request.Method).
-			Str("path", c.Request.URL.Path).
-			Err(err).
-			Msg("internal server error")
 
 		writeError(
 			c,
