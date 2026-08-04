@@ -8,6 +8,8 @@ const (
 	PaymentStatusPending   PaymentStatus = "pending"
 	PaymentStatusSucceeded PaymentStatus = "succeeded"
 	PaymentStatusFailed    PaymentStatus = "failed"
+
+	PaymentProviderMock = "mock"
 )
 
 type Payment struct {

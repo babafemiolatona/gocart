@@ -13,6 +13,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	lowStockThreshold    = 5
+	recentOrdersLimit    = 5
+)
+
 type MerchantService struct {
 	merchantRepo repositories.MerchantRepository
 	userRepo     repositories.AuthRepository
@@ -305,7 +310,7 @@ func (s *MerchantService) GetDashboard(
 
 	lowStockProducts, err := s.productRepo.CountLowStockByMerchant(
 		merchant.ID,
-		5,
+		lowStockThreshold,
 	)
 	if err != nil {
 		return nil, apperrors.New(
@@ -364,7 +369,7 @@ func (s *MerchantService) GetDashboard(
 
 	recentOrders, err := s.orderRepo.GetRecentOrdersByMerchant(
 		merchant.ID,
-		5,
+		recentOrdersLimit,
 	)
 	if err != nil {
 		return nil, apperrors.New(

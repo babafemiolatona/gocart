@@ -167,7 +167,7 @@ func (s *OrderService) ProcessCheckout(
 			Amount:         order.Total,
 			IdempotencyKey: idempotencyKey,
 			Status:         models.PaymentStatusPending,
-			Provider:       "mock",
+			Provider:       models.PaymentProviderMock,
 		}
 
 		if err := s.paymentRepo.CreateTx(tx, payment); err != nil {

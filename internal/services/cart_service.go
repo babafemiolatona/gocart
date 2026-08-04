@@ -17,8 +17,8 @@ type CartService struct {
 	productRepo repositories.ProductRepository
 }
 
-func NewCartService(cartRepo repositories.CartRepository, prouctRepo repositories.ProductRepository) *CartService {
-	return &CartService{cartRepo: cartRepo, productRepo: prouctRepo}
+func NewCartService(cartRepo repositories.CartRepository, productRepo repositories.ProductRepository) *CartService {
+	return &CartService{cartRepo: cartRepo, productRepo: productRepo}
 }
 
 func (s *CartService) GetCart(userID uint) (*models.Cart, error) {
@@ -47,17 +47,7 @@ func (s *CartService) GetCart(userID uint) (*models.Cart, error) {
 		)
 	}
 
-	cart, err = s.cartRepo.GetWithItems(userID)
-	if err != nil {
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			apperrors.CodeFetchCart,
-			"failed to fetch cart",
-			err,
-		)
-	}
-
-	return cart, nil
+	return newCart, nil
 }
 
 func (s *CartService) GetCartResponse(userID uint) (*dto.CartResponse, error) {
@@ -121,7 +111,7 @@ func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.Ca
 
 		if product.Stock < newQty {
 			return nil, apperrors.New(
-				http.StatusBadRequest,
+				http.StatusConflict,
 				apperrors.CodeInsufficientStock,
 				"insufficient stock for the requested quantity",
 				nil,

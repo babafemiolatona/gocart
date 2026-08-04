@@ -139,8 +139,6 @@ func (s *AuthService) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 }
 
 type CustomClaims struct {
-	// ID    uint   `json:"id"`
-	// Email string `json:"email"`
 	Role models.Role `json:"role"`
 	jwt.RegisteredClaims
 }
@@ -149,8 +147,6 @@ func (s *AuthService) GenerateToken(user *models.User) (string, int64, error) {
 	expiresAt := time.Now().Add(s.config.JWTExpiry)
 
 	claims := CustomClaims{
-		// ID:    user.ID,
-		// Email: user.Email,
 		Role: user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
