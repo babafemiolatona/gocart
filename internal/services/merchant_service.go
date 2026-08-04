@@ -170,14 +170,15 @@ func (s *MerchantService) UpdateProfile(
 
 func (s *MerchantService) GetOrders(
 	userID uint,
-) ([]dto.MerchantOrderResponse, error) {
+	p *dto.PaginationQuery,
+) (*dto.PaginatedResponse, error) {
 
 	merchant, err := s.getMerchant(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	orders, err := s.orderRepo.GetOrdersByMerchantID(merchant.ID)
+	orders, total, err := s.orderRepo.GetOrdersByMerchantID(merchant.ID, p)
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
@@ -187,7 +188,18 @@ func (s *MerchantService) GetOrders(
 		)
 	}
 
-	return mapper.ToMerchantOrderResponses(orders), nil
+	totalPages := int(total) / p.PageSize
+	if int(total)%p.PageSize > 0 {
+		totalPages++
+	}
+
+	return &dto.PaginatedResponse{
+		Data:      mapper.ToMerchantOrderResponses(orders),
+		Total:     total,
+		Page:      p.Page,
+		PageSize:  p.PageSize,
+		TotalPage: totalPages,
+	}, nil
 }
 
 func (s *MerchantService) GetOrder(

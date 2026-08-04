@@ -3,6 +3,7 @@ package handlers
 import (
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
+	"gocart/internal/query"
 	"gocart/internal/services"
 	"net/http"
 	"strconv"
@@ -44,12 +45,7 @@ func (h *OrderHandler) Checkout(c *gin.Context) {
 	var req dto.CheckoutRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 
@@ -80,7 +76,7 @@ func (h *OrderHandler) GetMyOrders(c *gin.Context) {
 		return
 	}
 
-	orders, err := h.orderService.GetUserOrders(userID)
+	orders, err := h.orderService.GetUserOrders(userID, query.ParsePagination(c))
 	if err != nil {
 		c.Error(err)
 		return

@@ -6,6 +6,7 @@ import (
 
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
+	"gocart/internal/query"
 	"gocart/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -43,12 +44,7 @@ func (h *MerchantHandler) RegisterMerchant(c *gin.Context) {
 	var req dto.MerchantRegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 
@@ -121,12 +117,7 @@ func (h *MerchantHandler) UpdateMe(c *gin.Context) {
 	var req dto.UpdateMerchantRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 
@@ -168,7 +159,7 @@ func (h *MerchantHandler) GetOrders(c *gin.Context) {
 		return
 	}
 
-	orders, err := h.merchantService.GetOrders(userID)
+	orders, err := h.merchantService.GetOrders(userID, query.ParsePagination(c))
 	if err != nil {
 		c.Error(err)
 		return
@@ -260,12 +251,7 @@ func (h *MerchantHandler) UpdateOrderStatus(c *gin.Context) {
 	var req dto.UpdateOrderStatusRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 

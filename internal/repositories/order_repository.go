@@ -1,22 +1,21 @@
 package repositories
 
 import (
+	"gocart/internal/dto"
 	"gocart/internal/models"
 
 	"gorm.io/gorm"
 )
 
 type OrderRepository interface {
-	CreateOrder(order *models.Order) error
 	CreateOrderTx(tx *gorm.DB, order *models.Order) error
 	GetOrderByID(id uint) (*models.Order, error)
-	GetOrderByIDTx(tx *gorm.DB, id uint) (*models.Order, error)
 	GetByUserIDAndIdempotencyKey(userID uint, key string) (*models.Order, error)
-	GetOrdersByUserID(userID uint) ([]models.Order, error)
+	GetOrdersByUserID(userID uint, p *dto.PaginationQuery) ([]models.Order, int64, error)
 	UpdateOrderStatus(orderID uint, status models.OrderStatus) error
 	UpdateOrderStatusTx(tx *gorm.DB, orderID uint, status models.OrderStatus) error
 	WithTransaction(fn func(tx *gorm.DB) error) error
-	GetOrdersByMerchantID(merchantID uint) ([]models.Order, error)
+	GetOrdersByMerchantID(merchantID uint, p *dto.PaginationQuery) ([]models.Order, int64, error)
 	GetMerchantOrderByID(merchantID uint, orderID uint) (*models.Order, error)
 
 	CountByMerchant(merchantID uint) (int64, error)
@@ -33,10 +32,6 @@ func NewOrderRepository(db *gorm.DB) OrderRepository {
 	return &orderRepository{db: db}
 }
 
-func (r *orderRepository) CreateOrder(order *models.Order) error {
-	return r.db.Create(order).Error
-}
-
 func (r *orderRepository) CreateOrderTx(tx *gorm.DB, order *models.Order) error {
 	return tx.Create(order).Error
 }
@@ -45,20 +40,6 @@ func (r *orderRepository) GetOrderByID(id uint) (*models.Order, error) {
 	var order models.Order
 
 	err := r.db.
-		Preload("Items").
-		First(&order, id).Error
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &order, nil
-}
-
-func (r *orderRepository) GetOrderByIDTx(tx *gorm.DB, id uint) (*models.Order, error) {
-	var order models.Order
-
-	err := tx.
 		Preload("Items").
 		First(&order, id).Error
 
@@ -85,20 +66,37 @@ func (r *orderRepository) GetByUserIDAndIdempotencyKey(userID uint, key string) 
 	return &order, nil
 }
 
-func (r *orderRepository) GetOrdersByUserID(userID uint) ([]models.Order, error) {
+func (r *orderRepository) GetOrdersByUserID(userID uint, p *dto.PaginationQuery) ([]models.Order, int64, error) {
 
 	var orders []models.Order
+	var total int64
+
+	if err := r.db.
+		Model(&models.Order{}).
+		Where("user_id = ?", userID).
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	order := "DESC"
+	if p.Order == "asc" {
+		order = "ASC"
+	}
+
+	offset := (p.Page - 1) * p.PageSize
 
 	err := r.db.
 		Where("user_id = ?", userID).
-		Order("created_at DESC").
+		Order("created_at " + order).
+		Offset(offset).
+		Limit(p.PageSize).
 		Find(&orders).Error
 
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return orders, nil
+	return orders, total, nil
 }
 
 func (r *orderRepository) UpdateOrderStatus(orderID uint, status models.OrderStatus) error {
@@ -143,25 +141,43 @@ func (r *orderRepository) WithTransaction(fn func(tx *gorm.DB) error) error {
 
 func (r *orderRepository) GetOrdersByMerchantID(
 	merchantID uint,
-) ([]models.Order, error) {
+	p *dto.PaginationQuery,
+) ([]models.Order, int64, error) {
 
 	var orders []models.Order
+	var total int64
 
-	err := r.db.
+	baseQuery := r.db.
+		Model(&models.Order{}).
 		Distinct("orders.*").
 		Joins("JOIN order_items ON order_items.order_id = orders.id").
 		Joins("JOIN products ON products.id = order_items.product_id").
-		Where("products.merchant_id = ?", merchantID).
+		Where("products.merchant_id = ?", merchantID)
+
+	if err := baseQuery.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	order := "DESC"
+	if p.Order == "asc" {
+		order = "ASC"
+	}
+
+	offset := (p.Page - 1) * p.PageSize
+
+	err := baseQuery.
+		Order("orders.created_at " + order).
+		Offset(offset).
+		Limit(p.PageSize).
 		Preload("User").
 		Preload("Items").
-		Order("orders.created_at DESC").
 		Find(&orders).Error
 
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return orders, nil
+	return orders, total, nil
 }
 
 func (r *orderRepository) GetMerchantOrderByID(

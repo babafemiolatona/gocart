@@ -219,8 +219,8 @@ func (s *OrderService) ProcessCheckout(
 	}, nil
 }
 
-func (s *OrderService) GetUserOrders(userID uint) ([]dto.OrderResponse, error) {
-	orders, err := s.orderRepo.GetOrdersByUserID(userID)
+func (s *OrderService) GetUserOrders(userID uint, p *dto.PaginationQuery) (*dto.PaginatedResponse, error) {
+	orders, total, err := s.orderRepo.GetOrdersByUserID(userID, p)
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
@@ -241,7 +241,18 @@ func (s *OrderService) GetUserOrders(userID uint) ([]dto.OrderResponse, error) {
 		}
 	}
 
-	return response, nil
+	totalPages := int(total) / p.PageSize
+	if int(total)%p.PageSize > 0 {
+		totalPages++
+	}
+
+	return &dto.PaginatedResponse{
+		Data:      response,
+		Total:     total,
+		Page:      p.Page,
+		PageSize:  p.PageSize,
+		TotalPage: totalPages,
+	}, nil
 
 }
 
