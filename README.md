@@ -25,7 +25,7 @@ Gocart is a backend **REST API** for an e-commerce platform built with **Go**, *
 - Create and retrieve a **cart** automatically for authenticated users.
 - **Add**, **update**, **remove**, and **clear** cart items.
 - Enforce **stock checks** while modifying the cart.
-- **Checkout** converts the cart into an order and deducts product stock.
+- **Checkout** converts the cart into an order and creates a pending payment; stock is deducted when the payment is processed.
 - **Cart totals** and **item counts** are recalculated after cart mutations.
 
 ### Orders
@@ -217,7 +217,7 @@ This is useful for local development and should be changed before any production
 
 All routes below require `Authorization: Bearer <token>`.
 
-- `GET /api/v1/users/profile`
+- `GET /api/v1/users/me`
 - `GET /api/v1/cart`
 - `POST /api/v1/cart/items`
 - `PUT /api/v1/cart/items/:itemID`
@@ -227,14 +227,30 @@ All routes below require `Authorization: Bearer <token>`.
 - `GET /api/v1/orders`
 - `GET /api/v1/orders/:id`
 - `PUT /api/v1/orders/:id/cancel`
+- `POST /api/v1/payments/:reference/process`
+- `GET /api/v1/payments/:reference`
+- `POST /api/v1/merchants/register`
+
+### Merchant Routes
+
+Merchant routes require a valid JWT for an account with a merchant profile.
+
+- `GET /api/v1/merchants/me`
+- `PUT /api/v1/merchants/me`
+- `GET /api/v1/merchants/dashboard`
+- `GET /api/v1/merchants/products`
+- `GET /api/v1/merchants/products/:id`
+- `POST /api/v1/merchants/products`
+- `PUT /api/v1/merchants/products/:id`
+- `DELETE /api/v1/merchants/products/:id`
+- `GET /api/v1/merchants/orders`
+- `GET /api/v1/merchants/orders/:id`
+- `PATCH /api/v1/merchants/orders/:id/status`
 
 ### Admin Routes
 
-Admin routes require both a valid JWT and the `admin` role.
+Admin routes require both a valid JWT and the `admin` role. Admin manages categories only (products are merchant-managed).
 
-- `POST /api/v1/admin/products`
-- `PUT /api/v1/admin/products/:id`
-- `DELETE /api/v1/admin/products/:id`
 - `POST /api/v1/admin/categories`
 - `PUT /api/v1/admin/categories/:id`
 - `DELETE /api/v1/admin/categories/:id`
