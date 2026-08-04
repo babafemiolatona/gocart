@@ -11,8 +11,6 @@ type PaymentRepository interface {
 	CreateTx(tx *gorm.DB, payment *models.Payment) error
 	GetByReference(reference string) (*models.Payment, error)
 	GetByOrderID(orderID uint) (*models.Payment, error)
-	UpdateStatus(reference string, status models.PaymentStatus) error
-	UpdateStatusTx(tx *gorm.DB, reference string, status models.PaymentStatus) error
 	TransitionStatusTx(tx *gorm.DB, reference string, from, to models.PaymentStatus) (bool, error)
 }
 
@@ -52,18 +50,6 @@ func (r *paymentRepository) GetByOrderID(orderID uint) (*models.Payment, error) 
 		return nil, err
 	}
 	return &payment, nil
-}
-
-func (r *paymentRepository) UpdateStatus(reference string, status models.PaymentStatus) error {
-	return r.db.Model(&models.Payment{}).
-		Where("reference = ?", reference).
-		Update("status", status).Error
-}
-
-func (r *paymentRepository) UpdateStatusTx(tx *gorm.DB, reference string, status models.PaymentStatus) error {
-	return tx.Model(&models.Payment{}).
-		Where("reference = ?", reference).
-		Update("status", status).Error
 }
 
 func (r *paymentRepository) TransitionStatusTx(tx *gorm.DB, reference string, from, to models.PaymentStatus) (bool, error) {

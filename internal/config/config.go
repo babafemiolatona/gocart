@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"gocart/internal/logger"
@@ -22,16 +21,9 @@ type Config struct {
 	DatabaseName     string
 	DatabaseSSLMode  string
 
-	RedisURL string
-
 	JWTSecret            string
 	JWTExpiry            time.Duration
 	TokenDurationMinutes int
-
-	SMTPHost     string
-	SMTPPort     int
-	SMTPUser     string
-	SMTPPassword string
 
 	SeedAdminEmail    string
 	SeedAdminPassword string
@@ -45,9 +37,6 @@ type Config struct {
 	MinioSecretKey string
 	MinioBucket    string
 	MinioUseSSL    bool
-
-	AllowedOrigins []string
-	TrustedProxies []string
 }
 
 var CFG *Config
@@ -72,10 +61,8 @@ func loadEnv() {
 		DatabasePassword: getEnv("DB_PASSWORD"),
 		DatabaseName:     getEnv("DB_NAME"),
 		DatabaseSSLMode:  getEnv("DB_SSL_MODE"),
-		RedisURL:         getEnv("REDIS_URL"),
 		JWTSecret:        getEnv("JWT_SECRET"),
 		JWTExpiry:        parseDuration(getEnv("JWT_EXPIRY")),
-		AllowedOrigins:   parseCommaSeparated(getEnv("ALLOWED_ORIGINS")),
 		UploadDir:        getEnvOptional("UPLOAD_DIR", "./uploads"),
 		MaxUploadSize:    int64(getEnvInt("MAX_UPLOAD_SIZE")),
 
@@ -95,16 +82,6 @@ func loadEnv() {
 		logger.Log.Fatal().Err(err).Msg("error parsing TOKEN_DURATION_MINUTES")
 	}
 	CFG.TokenDurationMinutes = tokenDurationMinutes
-
-	CFG.TrustedProxies = []string{}
-	trustedProxies := getEnvOptional("TRUSTED_PROXY_IPS", "")
-	if trustedProxies != "" {
-		for _, proxy := range strings.Split(trustedProxies, ",") {
-			if trimmed := strings.TrimSpace(proxy); trimmed != "" {
-				CFG.TrustedProxies = append(CFG.TrustedProxies, trimmed)
-			}
-		}
-	}
 }
 
 func (c *Config) GetDSN() string {
@@ -143,14 +120,4 @@ func parseDuration(value string) time.Duration {
 		logger.Log.Fatal().Err(err).Str("value", value).Msg("invalid duration format")
 	}
 	return duration
-}
-
-func parseCommaSeparated(value string) []string {
-	var result []string
-	for _, item := range strings.Split(value, ",") {
-		if trimmed := strings.TrimSpace(item); trimmed != "" {
-			result = append(result, trimmed)
-		}
-	}
-	return result
 }

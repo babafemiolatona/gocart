@@ -193,7 +193,3 @@ func (s *AuthService) VerifyToken(tokenStr string) (*CustomClaims, error) {
 
 	return claims, nil
 }
-
-func (s *AuthService) GetJWTSecret() string {
-	return s.config.JWTSecret
-}

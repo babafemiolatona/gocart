@@ -36,46 +36,6 @@ func NewPaymentService(
 	}
 }
 
-func (s *PaymentService) InitiatePayment(orderID uint) (*dto.PaymentResponse, error) {
-	order, err := s.orderRepo.GetOrderByID(orderID)
-	if err != nil {
-		return nil, repoErr(
-			err,
-			apperrors.CodeFetchOrder, "failed to fetch order",
-			apperrors.CodeOrderNotFound, "order not found",
-		)
-	}
-
-	reference, err := generateReference()
-	if err != nil {
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			apperrors.CodeGenerateReference,
-			"failed to generate payment reference",
-			err,
-		)
-	}
-
-	payment := &models.Payment{
-		OrderID:   order.ID,
-		Reference: reference,
-		Amount:    order.Total,
-		Status:    models.PaymentStatusPending,
-		Provider:  "mock",
-	}
-
-	if err := s.paymentRepo.Create(payment); err != nil {
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			apperrors.CodeCreatePayment,
-			"failed to create payment",
-			err,
-		)
-	}
-
-	return mapper.ToPaymentResponse(payment), nil
-}
-
 func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.PaymentResponse, error) {
 	payment, err := s.paymentRepo.GetByReference(reference)
 	if err != nil {

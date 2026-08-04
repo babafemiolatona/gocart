@@ -45,7 +45,3 @@ func (u *User) VerifyPassword(password string) bool {
 	)
 	return err == nil
 }
-
-func IsValidRole(role Role) bool {
-	return role == RoleCustomer || role == RoleAdmin
-}
