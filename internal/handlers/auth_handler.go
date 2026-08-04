@@ -35,12 +35,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 
@@ -70,12 +65,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 

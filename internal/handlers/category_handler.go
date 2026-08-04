@@ -39,12 +39,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 
 	var req dto.CategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 
@@ -141,12 +136,7 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 
 	var req dto.UpdateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 

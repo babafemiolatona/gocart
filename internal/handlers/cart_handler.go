@@ -71,12 +71,7 @@ func (h *CartHandler) AddToCart(c *gin.Context) {
 
 	var req dto.AddToCartRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 
@@ -126,12 +121,7 @@ func (h *CartHandler) UpdateCartItem(c *gin.Context) {
 
 	var req dto.UpdateCartItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 

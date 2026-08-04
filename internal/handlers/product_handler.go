@@ -49,12 +49,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	var req dto.CreateProductRequest
 
 	if err := c.ShouldBind(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 
@@ -185,12 +180,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 
 	var req dto.UpdateProductRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.Error(apperrors.New(
-			http.StatusBadRequest,
-			"validation_error",
-			err.Error(),
-			err,
-		))
+		c.Error(apperrors.ValidationError(err))
 		return
 	}
 
