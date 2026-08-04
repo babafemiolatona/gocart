@@ -10,8 +10,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func SeedAdmin(authRepo repositories.AuthRepository) error {
-	_, err := authRepo.GetByEmail("admin@gocart.com")
+func SeedAdmin(authRepo repositories.AuthRepository, adminEmail, adminPassword string) error {
+	if adminEmail == "" || adminPassword == "" {
+		logger.Log.Info().Msg("seed admin credentials not configured, skipping")
+		return nil
+	}
+
+	_, err := authRepo.GetByEmail(adminEmail)
 	if err == nil {
 		logger.Log.Info().Msg("admin user already exists, skipping seeding")
 		return nil
@@ -22,7 +27,7 @@ func SeedAdmin(authRepo repositories.AuthRepository) error {
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword(
-		[]byte("admin123"),
+		[]byte(adminPassword),
 		bcrypt.DefaultCost,
 	)
 	if err != nil {
@@ -33,7 +38,7 @@ func SeedAdmin(authRepo repositories.AuthRepository) error {
 		Username:  "admin",
 		FirstName: "Admin",
 		LastName:  "User",
-		Email:     "admin@gocart.com",
+		Email:     adminEmail,
 		Password:  string(hashedPassword),
 		Role:      models.RoleAdmin,
 	}

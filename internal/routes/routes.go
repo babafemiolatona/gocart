@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"gocart/internal/config"
 	"gocart/internal/handlers"
 	"gocart/internal/middleware"
 	"gocart/internal/models"
@@ -60,6 +61,7 @@ func SetupRoutes(
 			categoryRepo,
 			productImageRepo,
 			storage,
+			config.CFG.MaxUploadSize,
 		)
 
 		categoryService := services.NewCategoryService(categoryRepo)

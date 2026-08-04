@@ -13,8 +13,13 @@ import (
 )
 
 func InitDB(cfg *config.Config) (*gorm.DB, error) {
+	logLevel := gormlogger.Info
+	if cfg.Env == "production" {
+		logLevel = gormlogger.Warn
+	}
+
 	db, err := gorm.Open(postgres.Open(cfg.GetDSN()), &gorm.Config{
-		Logger:         gormlogger.Default.LogMode(gormlogger.Info),
+		Logger:         gormlogger.Default.LogMode(logLevel),
 		TranslateError: true,
 	})
 	if err != nil {

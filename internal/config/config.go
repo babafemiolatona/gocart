@@ -33,6 +33,9 @@ type Config struct {
 	SMTPUser     string
 	SMTPPassword string
 
+	SeedAdminEmail    string
+	SeedAdminPassword string
+
 	UploadDir     string
 	MaxUploadSize int64
 
@@ -75,6 +78,9 @@ func loadEnv() {
 		AllowedOrigins:   parseCommaSeparated(getEnv("ALLOWED_ORIGINS")),
 		UploadDir:        getEnvOptional("UPLOAD_DIR", "./uploads"),
 		MaxUploadSize:    int64(getEnvInt("MAX_UPLOAD_SIZE")),
+
+		SeedAdminEmail:    getEnvOptional("SEED_ADMIN_EMAIL", ""),
+		SeedAdminPassword: getEnvOptional("SEED_ADMIN_PASSWORD", ""),
 
 		// MinIO
 		MinioEndpoint:  getEnv("MINIO_ENDPOINT"),

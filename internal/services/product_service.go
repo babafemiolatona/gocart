@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
+	"gocart/internal/logger"
 	"gocart/internal/mapper"
 	"gocart/internal/query"
 	"net/http"
+	"strings"
 
 	"gocart/internal/models"
 	"gocart/internal/repositories"
@@ -22,6 +24,7 @@ type ProductService struct {
 	categoryRepo     repositories.CategoryRepository
 	productImageRepo repositories.ProductImageRepository
 	storage          storage.Storage
+	maxUploadSize    int64
 }
 
 func NewProductService(
@@ -29,12 +32,14 @@ func NewProductService(
 	categoryRepo repositories.CategoryRepository,
 	productImageRepo repositories.ProductImageRepository,
 	storage storage.Storage,
+	maxUploadSize int64,
 ) *ProductService {
 	return &ProductService{
 		productRepo:      productRepo,
 		categoryRepo:     categoryRepo,
 		productImageRepo: productImageRepo,
 		storage:          storage,
+		maxUploadSize:    maxUploadSize,
 	}
 }
 
@@ -94,12 +99,7 @@ func (s *ProductService) CreateProduct(
 
 	if len(images) > 0 {
 		if err := s.uploadImages(product.ID, images); err != nil {
-			return nil, apperrors.New(
-				http.StatusInternalServerError,
-				"upload_product_images_failed",
-				"failed to upload product images",
-				err,
-			)
+			return nil, err
 		}
 	}
 
@@ -120,14 +120,36 @@ func (s *ProductService) uploadImages(
 	productID uint,
 	images []*multipart.FileHeader,
 ) error {
-
 	productImages := make([]models.ProductImage, 0, len(images))
 
 	for _, image := range images {
 
+		if image.Size > s.maxUploadSize {
+			return apperrors.New(
+				http.StatusBadRequest,
+				"file_too_large",
+				fmt.Sprintf("image exceeds maximum size of %d bytes", s.maxUploadSize),
+				nil,
+			)
+		}
+
+		if !strings.HasPrefix(image.Header.Get("Content-Type"), "image/") {
+			return apperrors.New(
+				http.StatusBadRequest,
+				"invalid_image_type",
+				"only image files are allowed",
+				nil,
+			)
+		}
+
 		file, err := image.Open()
 		if err != nil {
-			return fmt.Errorf("failed to open image: %w", err)
+			return apperrors.New(
+				http.StatusInternalServerError,
+				"upload_product_images_failed",
+				"failed to open image",
+				err,
+			)
 		}
 
 		objectName, err := s.storage.UploadProductImage(
@@ -135,12 +157,16 @@ func (s *ProductService) uploadImages(
 			image,
 			productID,
 		)
-		if err != nil {
-			file.Close()
-			return fmt.Errorf("failed to upload image: %w", err)
-		}
-
 		file.Close()
+
+		if err != nil {
+			return apperrors.New(
+				http.StatusInternalServerError,
+				"upload_product_images_failed",
+				"failed to upload image",
+				err,
+			)
+		}
 
 		productImages = append(productImages, models.ProductImage{
 			ProductID: productID,
@@ -150,7 +176,15 @@ func (s *ProductService) uploadImages(
 
 	if len(productImages) > 0 {
 		if err := s.productImageRepo.CreateMany(productImages); err != nil {
-			return fmt.Errorf("failed to save product images: %w", err)
+			for _, image := range productImages {
+				_ = s.storage.DeleteObject(image.ImageURL)
+			}
+			return apperrors.New(
+				http.StatusInternalServerError,
+				"upload_product_images_failed",
+				"failed to save product images",
+				err,
+			)
 		}
 	}
 
@@ -321,12 +355,7 @@ func (s *ProductService) UpdateProduct(
 
 	if len(images) > 0 {
 		if err := s.uploadImages(id, images); err != nil {
-			return nil, apperrors.New(
-				http.StatusInternalServerError,
-				"upload_product_images_failed",
-				"failed to upload product images",
-				err,
-			)
+			return nil, err
 		}
 	}
 
@@ -388,6 +417,16 @@ func (s *ProductService) DeleteProduct(merchantID uint, id uint) error {
 			"failed to delete product",
 			err,
 		)
+	}
+
+	for _, image := range product.Images {
+		if err := s.storage.DeleteObject(image.ImageURL); err != nil {
+			logger.Log.Warn().
+				Uint("product_id", id).
+				Str("object", image.ImageURL).
+				Err(err).
+				Msg("failed to delete product image from storage")
+		}
 	}
 
 	return nil

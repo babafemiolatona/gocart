@@ -56,7 +56,11 @@ func main() {
 	// Create service layer
 	authRepo := repositories.NewAuthRepository(db)
 
-	if err := seed.SeedAdmin(authRepo); err != nil {
+	if err := seed.SeedAdmin(
+		authRepo,
+		config.CFG.SeedAdminEmail,
+		config.CFG.SeedAdminPassword,
+	); err != nil {
 		logger.Log.Fatal().Err(err).Msg("failed to seed admin")
 	}
 
