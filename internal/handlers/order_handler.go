@@ -28,7 +28,7 @@ func NewOrderHandler(orderService *services.OrderService) *OrderHandler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		dto.CheckoutRequest	true	"Checkout request"
-//	@Success		201		{object}	dto.OrderResponse
+//	@Success		201		{object}	dto.CheckoutResponse
 //	@Failure		400		{object}	errors.ErrorResponse
 //	@Failure		401		{object}	errors.ErrorResponse
 //	@Failure		404		{object}	errors.ErrorResponse

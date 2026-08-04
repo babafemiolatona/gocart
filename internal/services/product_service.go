@@ -399,7 +399,7 @@ func (s *ProductService) GetMerchantProduct(
 	if product.MerchantID != merchantID {
 		return nil, apperrors.New(
 			http.StatusForbidden,
-			"access_denied",
+			apperrors.CodeAccessDenied,
 			"you do not have permission to access this product",
 			nil,
 		)

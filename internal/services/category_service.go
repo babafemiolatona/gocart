@@ -31,7 +31,7 @@ func (s *CategoryService) CreateCategory(req *dto.CategoryRequest) (*dto.Categor
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, apperrors.New(
 				http.StatusConflict,
-				"category_exists",
+				apperrors.CodeCategoryExists,
 				"category already exists",
 				err,
 			)

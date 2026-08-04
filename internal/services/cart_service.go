@@ -188,7 +188,7 @@ func (s *CartService) recalculateCart(cartID uint, userID uint) (*models.Cart, e
 	if err := s.cartRepo.UpdateCartTotal(cartID, total, count); err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"update_cart_failed",
+			apperrors.CodeUpdateCart,
 			"failed to update cart",
 			err,
 		)

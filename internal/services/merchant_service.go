@@ -259,7 +259,7 @@ func (s *MerchantService) UpdateOrderStatus(
 		if order.Status != models.OrderStatusConfirmed {
 			return apperrors.New(
 				http.StatusBadRequest,
-				"invalid_order_status",
+				apperrors.CodeInvalidOrderStatus,
 				"only confirmed orders can be shipped",
 				nil,
 			)
@@ -270,7 +270,7 @@ func (s *MerchantService) UpdateOrderStatus(
 		if order.Status != models.OrderStatusShipped {
 			return apperrors.New(
 				http.StatusBadRequest,
-				"invalid_order_status",
+				apperrors.CodeInvalidOrderStatus,
 				"only shipped orders can be marked as delivered",
 				nil,
 			)
@@ -280,7 +280,7 @@ func (s *MerchantService) UpdateOrderStatus(
 
 		return apperrors.New(
 			http.StatusBadRequest,
-			"invalid_order_status",
+			apperrors.CodeInvalidOrderStatus,
 			"merchant can only update an order to 'shipped' or 'delivered'",
 			nil,
 		)

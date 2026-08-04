@@ -51,6 +51,7 @@ const (
 	CodeCreateCart        = "create_cart_failed"
 	CodeAddCartItem       = "add_cart_item_failed"
 	CodeUpdateCartItem    = "update_cart_item_failed"
+	CodeUpdateCart        = "update_cart_failed"
 	CodeRemoveCartItem    = "remove_cart_item_failed"
 	CodeClearCart         = "clear_cart_failed"
 	CodeCartItemNotFound  = "cart_item_not_found"
