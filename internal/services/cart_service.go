@@ -197,11 +197,11 @@ func (s *CartService) recalculateCart(cartID uint, userID uint) (*models.Cart, e
 		)
 	}
 
-	var total float64
+	var total int64
 	var count int
 
 	for _, item := range cart.Items {
-		total += float64(item.Quantity) * item.Price
+		total += item.Price * int64(item.Quantity)
 		count += item.Quantity
 	}
 

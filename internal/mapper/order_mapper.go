@@ -10,7 +10,7 @@ func ToOrderItemResponse(item models.OrderItem) dto.OrderItemResponse {
 		ProductID:   item.ProductID,
 		ProductName: item.ProductName,
 		Quantity:    item.Quantity,
-		Price:       item.Price,
+		Price:       MinorUnitsToUnit(item.Price),
 	}
 }
 
@@ -28,7 +28,7 @@ func ToOrderDetailsResponse(order *models.Order) *dto.OrderDetailsResponse {
 	return &dto.OrderDetailsResponse{
 		ID:              order.ID,
 		Status:          string(order.Status),
-		Total:           order.Total,
+		Total:           MinorUnitsToUnit(order.Total),
 		ShippingAddress: order.ShippingAddress,
 		Items:           ToOrderItemResponses(order.Items),
 		CreatedAt:       order.CreatedAt,
@@ -39,7 +39,7 @@ func ToOrderCheckoutResponse(order *models.Order) *dto.OrderCheckoutResponse {
 	return &dto.OrderCheckoutResponse{
 		ID:              order.ID,
 		Status:          string(order.Status),
-		Total:           order.Total,
+		Total:           MinorUnitsToUnit(order.Total),
 		ShippingAddress: order.ShippingAddress,
 		Items:           ToOrderItemResponses(order.Items),
 	}

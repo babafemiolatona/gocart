@@ -6,7 +6,7 @@ type Product struct {
 	ID          uint           `gorm:"primaryKey" json:"id"`
 	Name        string         `gorm:"not null;index" json:"name"`
 	Description string         `json:"description"`
-	Price       float64        `gorm:"not null" json:"price"`
+	Price       int64          `gorm:"not null" json:"price"`
 	Stock       int            `gorm:"not null;default:0" json:"stock"`
 	CategoryID  uint           `gorm:"not null" json:"category_id"`
 	MerchantID  uint           `gorm:"not null" json:"merchant_id"`

@@ -14,7 +14,7 @@ func ToProductResponse(product *models.Product) *dto.ProductResponse {
 		ID:          product.ID,
 		Name:        product.Name,
 		Description: product.Description,
-		Price:       product.Price,
+		Price:       MinorUnitsToUnit(product.Price),
 		Stock:       product.Stock,
 		CategoryID:  product.CategoryID,
 		MerchantID:  product.MerchantID,

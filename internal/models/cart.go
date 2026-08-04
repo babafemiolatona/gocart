@@ -7,7 +7,7 @@ type Cart struct {
 	UserID    uint       `gorm:"not null;uniqueIndex" json:"user_id"`
 	User      User       `gorm:"foreignKey:UserID" json:"-"`
 	Items     []CartItem `gorm:"foreignKey:CartID;onDelete:CASCADE" json:"items"`
-	Total     float64    `json:"total"`
+	Total     int64      `gorm:"not null;default:0" json:"total"`
 	ItemCount int        `json:"item_count"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
@@ -20,7 +20,7 @@ type CartItem struct {
 	ProductID uint      `gorm:"not null" json:"product_id"`
 	Product   Product   `gorm:"foreignKey:ProductID" json:"product,omitempty"`
 	Quantity  int       `gorm:"not null;default:1" json:"quantity"`
-	Price     float64   `gorm:"not null" json:"price"`
+	Price     int64     `gorm:"not null" json:"price"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

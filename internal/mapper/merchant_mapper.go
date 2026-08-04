@@ -24,7 +24,7 @@ func ToMerchantOrderItemResponse(item models.OrderItem) dto.MerchantOrderItemRes
 		ProductID:   item.ProductID,
 		ProductName: item.ProductName,
 		Quantity:    item.Quantity,
-		Price:       item.Price,
+		Price:       MinorUnitsToUnit(item.Price),
 	}
 }
 
@@ -38,7 +38,7 @@ func ToMerchantOrderResponse(order *models.Order) *dto.MerchantOrderResponse {
 	return &dto.MerchantOrderResponse{
 		ID:              order.ID,
 		Status:          string(order.Status),
-		Total:           order.Total,
+		Total:           MinorUnitsToUnit(order.Total),
 		ShippingAddress: order.ShippingAddress,
 		CreatedAt:       order.CreatedAt,
 		UpdatedAt:       order.UpdatedAt,
@@ -62,7 +62,7 @@ func ToMerchantRecentOrderResponse(order models.Order) dto.MerchantRecentOrderRe
 		ID:        order.ID,
 		Customer:  order.User.Email,
 		Status:    order.Status,
-		Total:     order.Total,
+		Total:     MinorUnitsToUnit(order.Total),
 		ItemCount: len(order.Items),
 		CreatedAt: order.CreatedAt,
 	}

@@ -10,7 +10,7 @@ func ToPaymentResponse(payment *models.Payment) *dto.PaymentResponse {
 		ID:        payment.ID,
 		OrderID:   payment.OrderID,
 		Reference: payment.Reference,
-		Amount:    payment.Amount,
+		Amount:    MinorUnitsToUnit(payment.Amount),
 		Status:    string(payment.Status),
 		Provider:  payment.Provider,
 		CreatedAt: payment.CreatedAt,

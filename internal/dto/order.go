@@ -41,4 +41,5 @@ type OrderResponse struct {
 
 type CheckoutRequest struct {
 	ShippingAddress string `json:"shipping_address" binding:"required"`
+	IdempotencyKey  string `json:"idempotency_key"`
 }

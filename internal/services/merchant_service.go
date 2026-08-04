@@ -419,7 +419,7 @@ func (s *MerchantService) GetDashboard(
 		TotalOrders:      totalOrders,
 		PendingOrders:    pendingOrders,
 		CompletedOrders:  completedOrders,
-		TotalRevenue:     totalRevenue,
+		TotalRevenue:     mapper.MinorUnitsToUnit(totalRevenue),
 		LowStockProducts: lowStockProducts,
 		RecentOrders:     mapper.ToMerchantRecentOrderResponses(recentOrders),
 	}, nil

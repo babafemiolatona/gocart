@@ -53,7 +53,7 @@ func (h *OrderHandler) Checkout(c *gin.Context) {
 		return
 	}
 
-	order, err := h.orderService.ProcessCheckout(userID, req.ShippingAddress)
+	order, err := h.orderService.ProcessCheckout(userID, req.ShippingAddress, req.IdempotencyKey)
 	if err != nil {
 		c.Error(err)
 		return

@@ -14,7 +14,7 @@ type CartRepository interface {
 	AddItem(item *models.CartItem) error
 	UpdateItem(item *models.CartItem) error
 	RemoveItem(cartItemID uint) error
-	UpdateCartTotal(cartID uint, total float64, itemCount int) error
+	UpdateCartTotal(cartID uint, total int64, itemCount int) error
 	ClearCart(cartID uint) error
 	ClearCartTx(tx *gorm.DB, cartID uint) error
 }
@@ -102,7 +102,7 @@ func (r *cartRepository) RemoveItem(cartItemID uint) error {
 	return nil
 }
 
-func (r *cartRepository) UpdateCartTotal(cartID uint, total float64, itemCount int) error {
+func (r *cartRepository) UpdateCartTotal(cartID uint, total int64, itemCount int) error {
 	return r.db.Model(&models.Cart{}).
 		Where("id = ?", cartID).
 		Updates(map[string]interface{}{

@@ -11,6 +11,7 @@ type OrderRepository interface {
 	CreateOrderTx(tx *gorm.DB, order *models.Order) error
 	GetOrderByID(id uint) (*models.Order, error)
 	GetOrderByIDTx(tx *gorm.DB, id uint) (*models.Order, error)
+	GetByUserIDAndIdempotencyKey(userID uint, key string) (*models.Order, error)
 	GetOrdersByUserID(userID uint) ([]models.Order, error)
 	UpdateOrderStatus(orderID uint, status models.OrderStatus) error
 	UpdateOrderStatusTx(tx *gorm.DB, orderID uint, status models.OrderStatus) error
@@ -20,7 +21,7 @@ type OrderRepository interface {
 
 	CountByMerchant(merchantID uint) (int64, error)
 	CountByMerchantAndStatus(merchantID uint, status models.OrderStatus) (int64, error)
-	SumRevenueByMerchant(merchantID uint) (float64, error)
+	SumRevenueByMerchant(merchantID uint) (int64, error)
 	GetRecentOrdersByMerchant(merchantID uint, limit int) ([]models.Order, error)
 }
 
@@ -60,6 +61,22 @@ func (r *orderRepository) GetOrderByIDTx(tx *gorm.DB, id uint) (*models.Order, e
 	err := tx.
 		Preload("Items").
 		First(&order, id).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &order, nil
+}
+
+func (r *orderRepository) GetByUserIDAndIdempotencyKey(userID uint, key string) (*models.Order, error) {
+	var order models.Order
+
+	err := r.db.
+		Preload("Items").
+		Where("user_id = ?", userID).
+		Where("idempotency_key = ?", key).
+		First(&order).Error
 
 	if err != nil {
 		return nil, err
@@ -207,9 +224,9 @@ func (r *orderRepository) CountByMerchantAndStatus(merchantID uint, status model
 	return count, nil
 }
 
-func (r *orderRepository) SumRevenueByMerchant(merchantID uint) (float64, error) {
+func (r *orderRepository) SumRevenueByMerchant(merchantID uint) (int64, error) {
 
-	var total float64
+	var total int64
 
 	err := r.db.
 		Model(&models.Order{}).

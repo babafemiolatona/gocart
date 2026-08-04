@@ -19,6 +19,8 @@ type OrderService struct {
 	paymentRepo repositories.PaymentRepository
 }
 
+var errCheckoutConflict = errors.New("checkout idempotency conflict")
+
 func NewOrderService(
 	orderRepo repositories.OrderRepository,
 	cartRepo repositories.CartRepository,
@@ -69,7 +71,28 @@ func (s *OrderService) ValidateCart(cart *models.Cart) error {
 func (s *OrderService) ProcessCheckout(
 	userID uint,
 	shippingAddress string,
+	idempotencyKey string,
 ) (*dto.CheckoutResponse, error) {
+
+	if idempotencyKey != "" {
+		existing, err := s.orderRepo.GetByUserIDAndIdempotencyKey(userID, idempotencyKey)
+		if err == nil {
+			payment, err := s.paymentRepo.GetByOrderID(existing.ID)
+			if err == nil {
+				return &dto.CheckoutResponse{
+					Order:   mapper.ToOrderCheckoutResponse(existing),
+					Payment: mapper.ToPaymentResponse(payment),
+				}, nil
+			}
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.New(
+				http.StatusInternalServerError,
+				"fetch_order_failed",
+				"failed to fetch order",
+				err,
+			)
+		}
+	}
 
 	cart, err := s.cartRepo.GetWithItems(userID)
 	if err != nil {
@@ -99,6 +122,7 @@ func (s *OrderService) ProcessCheckout(
 		Status:          models.OrderStatusPendingPayment,
 		Total:           cart.Total,
 		ShippingAddress: shippingAddress,
+		IdempotencyKey:  idempotencyKey,
 	}
 
 	for _, item := range cart.Items {
@@ -125,6 +149,10 @@ func (s *OrderService) ProcessCheckout(
 	err = s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
 
 		if err := s.orderRepo.CreateOrderTx(tx, order); err != nil {
+			if idempotencyKey != "" && errors.Is(err, gorm.ErrDuplicatedKey) {
+				return errCheckoutConflict
+			}
+
 			return apperrors.New(
 				http.StatusInternalServerError,
 				"create_order_failed",
@@ -134,11 +162,12 @@ func (s *OrderService) ProcessCheckout(
 		}
 
 		payment = &models.Payment{
-			OrderID:   order.ID,
-			Reference: reference,
-			Amount:    order.Total,
-			Status:    models.PaymentStatusPending,
-			Provider:  "mock",
+			OrderID:        order.ID,
+			Reference:      reference,
+			Amount:         order.Total,
+			IdempotencyKey: idempotencyKey,
+			Status:         models.PaymentStatusPending,
+			Provider:       "mock",
 		}
 
 		if err := s.paymentRepo.CreateTx(tx, payment); err != nil {
@@ -152,6 +181,33 @@ func (s *OrderService) ProcessCheckout(
 
 		return nil
 	})
+
+	if errors.Is(err, errCheckoutConflict) {
+		existing, fetchErr := s.orderRepo.GetByUserIDAndIdempotencyKey(userID, idempotencyKey)
+		if fetchErr != nil {
+			return nil, apperrors.New(
+				http.StatusInternalServerError,
+				"fetch_order_failed",
+				"failed to fetch order",
+				fetchErr,
+			)
+		}
+
+		existingPayment, fetchErr := s.paymentRepo.GetByOrderID(existing.ID)
+		if fetchErr != nil {
+			return nil, apperrors.New(
+				http.StatusInternalServerError,
+				"fetch_payment_failed",
+				"failed to fetch payment",
+				fetchErr,
+			)
+		}
+
+		return &dto.CheckoutResponse{
+			Order:   mapper.ToOrderCheckoutResponse(existing),
+			Payment: mapper.ToPaymentResponse(existingPayment),
+		}, nil
+	}
 
 	if err != nil {
 		return nil, err
@@ -179,7 +235,7 @@ func (s *OrderService) GetUserOrders(userID uint) ([]dto.OrderResponse, error) {
 		response[i] = dto.OrderResponse{
 			ID:              order.ID,
 			Status:          string(order.Status),
-			Total:           order.Total,
+			Total:           mapper.MinorUnitsToUnit(order.Total),
 			ShippingAddress: order.ShippingAddress,
 			CreatedAt:       order.CreatedAt,
 		}
@@ -212,7 +268,7 @@ func (s *OrderService) GetOrder(userID, orderID uint) (*dto.OrderDetailsResponse
 	response := &dto.OrderDetailsResponse{
 		ID:              order.ID,
 		Status:          string(order.Status),
-		Total:           order.Total,
+		Total:           mapper.MinorUnitsToUnit(order.Total),
 		ShippingAddress: order.ShippingAddress,
 		Items:           mapper.ToOrderItemResponses(order.Items),
 		CreatedAt:       order.CreatedAt,

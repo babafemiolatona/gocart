@@ -66,7 +66,7 @@ func (s *ProductService) CreateProduct(
 	product := &models.Product{
 		Name:        req.Name,
 		Description: req.Description,
-		Price:       req.Price,
+		Price:       mapper.UnitToMinorUnits(req.Price),
 		Stock:       req.Stock,
 		CategoryID:  req.CategoryID,
 		MerchantID:  merchantID,
@@ -266,7 +266,7 @@ func (s *ProductService) UpdateProduct(
 		updates["description"] = *req.Description
 	}
 	if req.Price != nil {
-		updates["price"] = *req.Price
+		updates["price"] = mapper.UnitToMinorUnits(*req.Price)
 	}
 	if req.Stock != nil {
 		updates["stock"] = *req.Stock

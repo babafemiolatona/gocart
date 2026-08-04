@@ -22,7 +22,7 @@ func ToCartProductResponse(product models.Product) dto.CartProductResponse {
 	return dto.CartProductResponse{
 		ID:       product.ID,
 		Name:     product.Name,
-		Price:    product.Price,
+		Price:    MinorUnitsToUnit(product.Price),
 		ImageURL: imageURL,
 	}
 }
@@ -32,8 +32,8 @@ func ToCartItemResponse(item models.CartItem) dto.CartItemResponse {
 		ID:       item.ID,
 		Product:  ToCartProductResponse(item.Product),
 		Quantity: item.Quantity,
-		Price:    item.Price,
-		Subtotal: item.Price * float64(item.Quantity),
+		Price:    MinorUnitsToUnit(item.Price),
+		Subtotal: MinorUnitsToUnit(item.Price * int64(item.Quantity)),
 	}
 }
 
@@ -50,7 +50,7 @@ func ToCartItemResponses(items []models.CartItem) []dto.CartItemResponse {
 func ToCartResponse(cart *models.Cart) *dto.CartResponse {
 	return &dto.CartResponse{
 		ID:        cart.ID,
-		Total:     cart.Total,
+		Total:     MinorUnitsToUnit(cart.Total),
 		ItemCount: cart.ItemCount,
 		Items:     ToCartItemResponses(cart.Items),
 	}

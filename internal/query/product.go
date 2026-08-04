@@ -12,8 +12,8 @@ import (
 type ProductFilters struct {
 	CategoryID  uint
 	MerchantID  uint
-	MinPrice    float64
-	MaxPrice    float64
+	MinPrice    int64
+	MaxPrice    int64
 	InStock     *bool
 	SearchQuery string
 }
@@ -56,13 +56,13 @@ func NewProductQueryFromGin(c *gin.Context) (*dto.PaginationQuery, *ProductFilte
 
 	if v := c.Query("min_price"); v != "" {
 		if p, err := strconv.ParseFloat(v, 64); err == nil {
-			filters.MinPrice = p
+			filters.MinPrice = int64(p * 100)
 		}
 	}
 
 	if v := c.Query("max_price"); v != "" {
 		if p, err := strconv.ParseFloat(v, 64); err == nil {
-			filters.MaxPrice = p
+			filters.MaxPrice = int64(p * 100)
 		}
 	}
 

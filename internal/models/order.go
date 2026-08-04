@@ -18,8 +18,9 @@ type Order struct {
 	UserID          uint        `gorm:"not null" json:"user_id"`
 	User            User        `gorm:"foreignKey:UserID" json:"user"`
 	Status          OrderStatus `gorm:"not null" json:"status"`
-	Total           float64     `gorm:"not null" json:"total"`
+	Total           int64       `gorm:"not null" json:"total"`
 	ShippingAddress string      `gorm:"not null" json:"shipping_address"`
+	IdempotencyKey  string      `gorm:"size:100;uniqueIndex:idx_order_idem,where:idempotency_key <> ''" json:"-"`
 	Items           []OrderItem `gorm:"foreignKey:OrderID" json:"items"`
 	CreatedAt       time.Time   `json:"created_at"`
 	UpdatedAt       time.Time   `json:"updated_at"`

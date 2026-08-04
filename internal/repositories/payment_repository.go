@@ -13,6 +13,7 @@ type PaymentRepository interface {
 	GetByOrderID(orderID uint) (*models.Payment, error)
 	UpdateStatus(reference string, status models.PaymentStatus) error
 	UpdateStatusTx(tx *gorm.DB, reference string, status models.PaymentStatus) error
+	TransitionStatusTx(tx *gorm.DB, reference string, from, to models.PaymentStatus) (bool, error)
 }
 
 type paymentRepository struct {
@@ -63,4 +64,16 @@ func (r *paymentRepository) UpdateStatusTx(tx *gorm.DB, reference string, status
 	return tx.Model(&models.Payment{}).
 		Where("reference = ?", reference).
 		Update("status", status).Error
+}
+
+func (r *paymentRepository) TransitionStatusTx(tx *gorm.DB, reference string, from, to models.PaymentStatus) (bool, error) {
+	result := tx.Model(&models.Payment{}).
+		Where("reference = ? AND status = ?", reference, from).
+		Update("status", to)
+
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	return result.RowsAffected > 0, nil
 }

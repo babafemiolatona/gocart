@@ -151,6 +151,25 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 
 	err = s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
 
+		claimed, err := s.paymentRepo.TransitionStatusTx(
+			tx,
+			reference,
+			models.PaymentStatusPending,
+			models.PaymentStatusSucceeded,
+		)
+		if err != nil {
+			return apperrors.New(
+				http.StatusInternalServerError,
+				"update_payment_failed",
+				"failed to update payment",
+				err,
+			)
+		}
+
+		if !claimed {
+			return nil
+		}
+
 		for _, item := range cart.Items {
 
 			if err := s.productRepo.DecrementStockTx(tx, item.ProductID, item.Quantity); err != nil {
@@ -186,19 +205,6 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 				http.StatusInternalServerError,
 				"clear_cart_failed",
 				"failed to clear cart",
-				err,
-			)
-		}
-
-		if err := s.paymentRepo.UpdateStatusTx(
-			tx,
-			reference,
-			models.PaymentStatusSucceeded,
-		); err != nil {
-			return apperrors.New(
-				http.StatusInternalServerError,
-				"update_payment_failed",
-				"failed to update payment",
 				err,
 			)
 		}
