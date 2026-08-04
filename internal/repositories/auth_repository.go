@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	"errors"
 	"gocart/internal/models"
 
 	"gorm.io/gorm"
@@ -14,9 +13,6 @@ type AuthRepository interface {
 	GetByID(id uint) (*models.User, error)
 	GetByIDTx(tx *gorm.DB, id uint) (*models.User, error)
 	ExistsByEmail(email string) (bool, error)
-	Update(user *models.User) error
-	UpdateTx(tx *gorm.DB, user *models.User) error
-	Delete(id uint) error
 }
 
 type authRepository struct {
@@ -92,51 +88,4 @@ func (r *authRepository) GetByIDTx(tx *gorm.DB, id uint) (*models.User, error) {
 	}
 
 	return &user, nil
-}
-
-func (r *authRepository) Update(user *models.User) error {
-	result := r.db.
-		Model(&models.User{}).
-		Where("id = ?", user.ID).
-		Updates(user)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return errors.New("User not found")
-	}
-
-	return nil
-}
-
-func (r *authRepository) UpdateTx(tx *gorm.DB, user *models.User) error {
-	result := tx.
-		Model(&models.User{}).
-		Where("id = ?", user.ID).
-		Updates(user)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-
-	return nil
-}
-
-func (r *authRepository) Delete(id uint) error {
-	result := r.db.Delete(&models.User{}, id)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return errors.New("User not found")
-	}
-	return result.Error
 }

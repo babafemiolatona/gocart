@@ -51,20 +51,10 @@ func (s *ProductService) CreateProduct(
 
 	_, err := s.categoryRepo.GetByID(req.CategoryID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"category_not_found",
-				"category not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_category_failed",
-			"failed to fetch category",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchCategory, "failed to fetch category",
+			apperrors.CodeCategoryNotFound, "category not found",
 		)
 	}
 
@@ -83,7 +73,7 @@ func (s *ProductService) CreateProduct(
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, apperrors.New(
 				http.StatusConflict,
-				"product_exists",
+				apperrors.CodeProductExists,
 				"product already exists",
 				err,
 			)
@@ -91,7 +81,7 @@ func (s *ProductService) CreateProduct(
 
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"create_product_failed",
+			apperrors.CodeCreateProduct,
 			"failed to create product",
 			err,
 		)
@@ -107,7 +97,7 @@ func (s *ProductService) CreateProduct(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_product_failed",
+			apperrors.CodeFetchProduct,
 			"failed to fetch product",
 			err,
 		)
@@ -127,7 +117,7 @@ func (s *ProductService) uploadImages(
 		if image.Size > s.maxUploadSize {
 			return apperrors.New(
 				http.StatusBadRequest,
-				"file_too_large",
+				apperrors.CodeFileTooLarge,
 				fmt.Sprintf("image exceeds maximum size of %d bytes", s.maxUploadSize),
 				nil,
 			)
@@ -136,7 +126,7 @@ func (s *ProductService) uploadImages(
 		if !strings.HasPrefix(image.Header.Get("Content-Type"), "image/") {
 			return apperrors.New(
 				http.StatusBadRequest,
-				"invalid_image_type",
+				apperrors.CodeInvalidImageType,
 				"only image files are allowed",
 				nil,
 			)
@@ -146,7 +136,7 @@ func (s *ProductService) uploadImages(
 		if err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"upload_product_images_failed",
+				apperrors.CodeUploadImages,
 				"failed to open image",
 				err,
 			)
@@ -162,7 +152,7 @@ func (s *ProductService) uploadImages(
 		if err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"upload_product_images_failed",
+				apperrors.CodeUploadImages,
 				"failed to upload image",
 				err,
 			)
@@ -181,7 +171,7 @@ func (s *ProductService) uploadImages(
 			}
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"upload_product_images_failed",
+				apperrors.CodeUploadImages,
 				"failed to save product images",
 				err,
 			)
@@ -194,20 +184,10 @@ func (s *ProductService) uploadImages(
 func (s *ProductService) GetProduct(id uint) (*dto.ProductResponse, error) {
 	product, err := s.productRepo.GetByID(id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"product_not_found",
-				"product not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_product_failed",
-			"failed to fetch product",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchProduct, "failed to fetch product",
+			apperrors.CodeProductNotFound, "product not found",
 		)
 	}
 
@@ -237,7 +217,7 @@ func (s *ProductService) GetProducts(query *dto.PaginationQuery, filters *query.
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_products_failed",
+			apperrors.CodeFetchProducts,
 			"failed to fetch products",
 			err,
 		)
@@ -265,27 +245,17 @@ func (s *ProductService) UpdateProduct(
 ) (*dto.ProductResponse, error) {
 	product, err := s.productRepo.GetByID(id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"product_not_found",
-				"product not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_product_failed",
-			"failed to fetch product",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchProduct, "failed to fetch product",
+			apperrors.CodeProductNotFound, "product not found",
 		)
 	}
 
 	if product.MerchantID != merchantID {
 		return nil, apperrors.New(
 			http.StatusForbidden,
-			"forbidden",
+			apperrors.CodeForbidden,
 			"you do not own this product",
 			nil,
 		)
@@ -307,20 +277,10 @@ func (s *ProductService) UpdateProduct(
 	}
 	if req.CategoryID != nil {
 		if _, err := s.categoryRepo.GetByID(*req.CategoryID); err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, apperrors.New(
-					http.StatusNotFound,
-					"category_not_found",
-					"category not found",
-					err,
-				)
-			}
-
-			return nil, apperrors.New(
-				http.StatusInternalServerError,
-				"fetch_category_failed",
-				"failed to fetch category",
+			return nil, repoErr(
 				err,
+				apperrors.CodeFetchCategory, "failed to fetch category",
+				apperrors.CodeCategoryNotFound, "category not found",
 			)
 		}
 
@@ -338,7 +298,7 @@ func (s *ProductService) UpdateProduct(
 			if errors.Is(err, gorm.ErrDuplicatedKey) {
 				return nil, apperrors.New(
 					http.StatusConflict,
-					"product_exists",
+					apperrors.CodeProductExists,
 					"product already exists",
 					err,
 				)
@@ -346,7 +306,7 @@ func (s *ProductService) UpdateProduct(
 
 			return nil, apperrors.New(
 				http.StatusInternalServerError,
-				"update_product_failed",
+				apperrors.CodeUpdateProduct,
 				"failed to update product",
 				err,
 			)
@@ -363,7 +323,7 @@ func (s *ProductService) UpdateProduct(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_product_failed",
+			apperrors.CodeFetchProduct,
 			"failed to fetch product",
 			err,
 		)
@@ -375,27 +335,17 @@ func (s *ProductService) UpdateProduct(
 func (s *ProductService) DeleteProduct(merchantID uint, id uint) error {
 	product, err := s.productRepo.GetByID(id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return apperrors.New(
-				http.StatusNotFound,
-				"product_not_found",
-				"product not found",
-				err,
-			)
-		}
-
-		return apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_product_failed",
-			"failed to fetch product",
+		return repoErr(
 			err,
+			apperrors.CodeFetchProduct, "failed to fetch product",
+			apperrors.CodeProductNotFound, "product not found",
 		)
 	}
 
 	if product.MerchantID != merchantID {
 		return apperrors.New(
 			http.StatusForbidden,
-			"forbidden",
+			apperrors.CodeForbidden,
 			"you do not own this product",
 			nil,
 		)
@@ -405,7 +355,7 @@ func (s *ProductService) DeleteProduct(merchantID uint, id uint) error {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return apperrors.New(
 				http.StatusNotFound,
-				"product_not_found",
+				apperrors.CodeProductNotFound,
 				"product not found",
 				err,
 			)
@@ -413,7 +363,7 @@ func (s *ProductService) DeleteProduct(merchantID uint, id uint) error {
 
 		return apperrors.New(
 			http.StatusInternalServerError,
-			"delete_product_failed",
+			apperrors.CodeDeleteProduct,
 			"failed to delete product",
 			err,
 		)
@@ -439,20 +389,10 @@ func (s *ProductService) GetMerchantProduct(
 
 	product, err := s.productRepo.GetByID(productID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"product_not_found",
-				"product not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_product_failed",
-			"failed to fetch product",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchProduct, "failed to fetch product",
+			apperrors.CodeProductNotFound, "product not found",
 		)
 	}
 

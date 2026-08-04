@@ -42,7 +42,7 @@ func (s *OrderService) ValidateCart(cart *models.Cart) error {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return apperrors.New(
 					http.StatusNotFound,
-					"product_not_found",
+					apperrors.CodeProductNotFound,
 					"product not found",
 					err,
 				)
@@ -87,7 +87,7 @@ func (s *OrderService) ProcessCheckout(
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperrors.New(
 				http.StatusInternalServerError,
-				"fetch_order_failed",
+				apperrors.CodeFetchOrder,
 				"failed to fetch order",
 				err,
 			)
@@ -98,7 +98,7 @@ func (s *OrderService) ProcessCheckout(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_cart_failed",
+			apperrors.CodeFetchCart,
 			"failed to fetch cart",
 			err,
 		)
@@ -107,7 +107,7 @@ func (s *OrderService) ProcessCheckout(
 	if len(cart.Items) == 0 {
 		return nil, apperrors.New(
 			http.StatusBadRequest,
-			"cart_empty",
+			apperrors.CodeCartEmpty,
 			"cart is empty",
 			nil,
 		)
@@ -138,7 +138,7 @@ func (s *OrderService) ProcessCheckout(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"generate_reference_failed",
+			apperrors.CodeGenerateReference,
 			"failed to generate payment reference",
 			err,
 		)
@@ -155,7 +155,7 @@ func (s *OrderService) ProcessCheckout(
 
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"create_order_failed",
+				apperrors.CodeCreateOrder,
 				"failed to create order",
 				err,
 			)
@@ -173,7 +173,7 @@ func (s *OrderService) ProcessCheckout(
 		if err := s.paymentRepo.CreateTx(tx, payment); err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"create_payment_failed",
+				apperrors.CodeCreatePayment,
 				"failed to create payment",
 				err,
 			)
@@ -187,7 +187,7 @@ func (s *OrderService) ProcessCheckout(
 		if fetchErr != nil {
 			return nil, apperrors.New(
 				http.StatusInternalServerError,
-				"fetch_order_failed",
+				apperrors.CodeFetchOrder,
 				"failed to fetch order",
 				fetchErr,
 			)
@@ -224,7 +224,7 @@ func (s *OrderService) GetUserOrders(userID uint) ([]dto.OrderResponse, error) {
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_orders_failed",
+			apperrors.CodeFetchOrders,
 			"failed to fetch orders",
 			err,
 		)
@@ -248,18 +248,17 @@ func (s *OrderService) GetUserOrders(userID uint) ([]dto.OrderResponse, error) {
 func (s *OrderService) GetOrder(userID, orderID uint) (*dto.OrderDetailsResponse, error) {
 	order, err := s.orderRepo.GetOrderByID(orderID)
 	if err != nil {
-		return nil, apperrors.New(
-			http.StatusNotFound,
-			"order_not_found",
-			"order not found",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchOrder, "failed to fetch order",
+			apperrors.CodeOrderNotFound, "order not found",
 		)
 	}
 
 	if order.UserID != userID {
 		return nil, apperrors.New(
 			http.StatusNotFound,
-			"order_not_found",
+			apperrors.CodeOrderNotFound,
 			"order not found",
 			nil,
 		)
@@ -280,27 +279,17 @@ func (s *OrderService) GetOrder(userID, orderID uint) (*dto.OrderDetailsResponse
 func (s *OrderService) CancelOrder(userID, orderID uint) error {
 	order, err := s.orderRepo.GetOrderByID(orderID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return apperrors.New(
-				http.StatusNotFound,
-				"order_not_found",
-				"order not found",
-				err,
-			)
-		}
-
-		return apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_order_failed",
-			"failed to fetch order",
+		return repoErr(
 			err,
+			apperrors.CodeFetchOrder, "failed to fetch order",
+			apperrors.CodeOrderNotFound, "order not found",
 		)
 	}
 
 	if order.UserID != userID {
 		return apperrors.New(
 			http.StatusNotFound,
-			"order_not_found",
+			apperrors.CodeOrderNotFound,
 			"order not found",
 			nil,
 		)
@@ -309,7 +298,7 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 	if order.Status == models.OrderStatusCancelled {
 		return apperrors.New(
 			http.StatusConflict,
-			"order_already_cancelled",
+			apperrors.CodeOrderAlreadyClosed,
 			"order has already been cancelled",
 			nil,
 		)
@@ -322,7 +311,7 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 		); err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"cancel_order_failed",
+				apperrors.CodeCancelOrder,
 				"failed to cancel order",
 				err,
 			)
@@ -340,7 +329,7 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 					if errors.Is(err, gorm.ErrRecordNotFound) {
 						return apperrors.New(
 							http.StatusNotFound,
-							"product_not_found",
+							apperrors.CodeProductNotFound,
 							"product not found",
 							err,
 						)
@@ -362,7 +351,7 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 			); err != nil {
 				return apperrors.New(
 					http.StatusInternalServerError,
-					"cancel_order_failed",
+					apperrors.CodeCancelOrder,
 					"failed to cancel order",
 					err,
 				)
@@ -380,7 +369,7 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 
 	return apperrors.New(
 		http.StatusConflict,
-		"invalid_order_status",
+		apperrors.CodeInvalidOrderStatus,
 		"order cannot be cancelled",
 		nil,
 	)

@@ -37,7 +37,7 @@ func (s *AuthService) Register(req *dto.RegisterRequest) (*dto.UserResponse, err
 	if err := req.Validate(); err != nil {
 		return nil, apperrors.New(
 			http.StatusBadRequest,
-			"validation_error",
+			apperrors.CodeValidationError,
 			err.Error(),
 			err,
 		)
@@ -47,7 +47,7 @@ func (s *AuthService) Register(req *dto.RegisterRequest) (*dto.UserResponse, err
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"check_user_failed",
+			apperrors.CodeCheckUser,
 			"failed to check if user already exists",
 			err,
 		)
@@ -56,7 +56,7 @@ func (s *AuthService) Register(req *dto.RegisterRequest) (*dto.UserResponse, err
 	if exists {
 		return nil, apperrors.New(
 			http.StatusConflict,
-			"user_exists",
+			apperrors.CodeUserExists,
 			"user already exists",
 			nil,
 		)
@@ -73,7 +73,7 @@ func (s *AuthService) Register(req *dto.RegisterRequest) (*dto.UserResponse, err
 	if err := user.HashPassword(req.Password); err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"hash_password_failed",
+			apperrors.CodeHashPassword,
 			"failed to hash password",
 			err,
 		)
@@ -83,7 +83,7 @@ func (s *AuthService) Register(req *dto.RegisterRequest) (*dto.UserResponse, err
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, apperrors.New(
 				http.StatusConflict,
-				"user_exists",
+				apperrors.CodeUserExists,
 				"user already exists",
 				nil,
 			)
@@ -91,7 +91,7 @@ func (s *AuthService) Register(req *dto.RegisterRequest) (*dto.UserResponse, err
 
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"create_user_failed",
+			apperrors.CodeCreateUser,
 			"failed to create user",
 			err,
 		)
@@ -107,7 +107,7 @@ func (s *AuthService) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusUnauthorized,
-			"invalid_credentials",
+			apperrors.CodeInvalidCredentials,
 			"invalid username/email or password",
 			nil,
 		)
@@ -116,7 +116,7 @@ func (s *AuthService) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 	if !user.VerifyPassword(req.Password) {
 		return nil, apperrors.New(
 			http.StatusUnauthorized,
-			"invalid_credentials",
+			apperrors.CodeInvalidCredentials,
 			"invalid username/email or password",
 			nil,
 		)
@@ -126,7 +126,7 @@ func (s *AuthService) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"generate_token_failed",
+			apperrors.CodeGenerateToken,
 			"failed to generate token",
 			err,
 		)

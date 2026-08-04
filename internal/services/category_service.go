@@ -39,7 +39,7 @@ func (s *CategoryService) CreateCategory(req *dto.CategoryRequest) (*dto.Categor
 
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"create_category_failed",
+			apperrors.CodeCreateCategory,
 			"failed to create category",
 			err,
 		)
@@ -51,19 +51,10 @@ func (s *CategoryService) CreateCategory(req *dto.CategoryRequest) (*dto.Categor
 func (s *CategoryService) GetCategoryByID(id uint) (*dto.CategoryResponse, error) {
 	category, err := s.categoryRepo.GetByID(id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"category_not_found",
-				"category not found",
-				err,
-			)
-		}
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_category_failed",
-			"failed to fetch category",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchCategory, "failed to fetch category",
+			apperrors.CodeCategoryNotFound, "category not found",
 		)
 	}
 	return mapper.ToCategoryResponse(category), nil
@@ -75,7 +66,7 @@ func (s *CategoryService) GetAllCategories() ([]dto.CategoryResponse, error) {
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_categories_failed",
+			apperrors.CodeFetchCategories,
 			"failed to fetch categories",
 			err,
 		)
@@ -87,21 +78,10 @@ func (s *CategoryService) GetAllCategories() ([]dto.CategoryResponse, error) {
 func (s *CategoryService) UpdateCategory(req *dto.UpdateCategoryRequest, id uint) (*dto.CategoryResponse, error) {
 	category, err := s.categoryRepo.GetByID(id)
 	if err != nil {
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"category_not_found",
-				"category not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_category_failed",
-			"failed to fetch category",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchCategory, "failed to fetch category",
+			apperrors.CodeCategoryNotFound, "category not found",
 		)
 	}
 
@@ -127,7 +107,7 @@ func (s *CategoryService) UpdateCategory(req *dto.UpdateCategoryRequest, id uint
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, apperrors.New(
 				http.StatusConflict,
-				"category_exists",
+				apperrors.CodeCategoryExists,
 				"category already exists",
 				err,
 			)
@@ -135,7 +115,7 @@ func (s *CategoryService) UpdateCategory(req *dto.UpdateCategoryRequest, id uint
 
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"update_category_failed",
+			apperrors.CodeUpdateCategory,
 			"failed to update category",
 			err,
 		)
@@ -147,28 +127,17 @@ func (s *CategoryService) UpdateCategory(req *dto.UpdateCategoryRequest, id uint
 func (s *CategoryService) DeleteCategory(id uint) error {
 	_, err := s.categoryRepo.GetByID(id)
 	if err != nil {
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return apperrors.New(
-				http.StatusNotFound,
-				"category_not_found",
-				"category not found",
-				err,
-			)
-		}
-
-		return apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_category_failed",
-			"failed to fetch category",
+		return repoErr(
 			err,
+			apperrors.CodeFetchCategory, "failed to fetch category",
+			apperrors.CodeCategoryNotFound, "category not found",
 		)
 	}
 
 	if err := s.categoryRepo.Delete(id); err != nil {
 		return apperrors.New(
 			http.StatusInternalServerError,
-			"delete_category_failed",
+			apperrors.CodeDeleteCategory,
 			"failed to delete category",
 			err,
 		)

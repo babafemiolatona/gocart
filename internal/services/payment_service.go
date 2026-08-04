@@ -39,20 +39,10 @@ func NewPaymentService(
 func (s *PaymentService) InitiatePayment(orderID uint) (*dto.PaymentResponse, error) {
 	order, err := s.orderRepo.GetOrderByID(orderID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"order_not_found",
-				"order not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_order_failed",
-			"failed to fetch order",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchOrder, "failed to fetch order",
+			apperrors.CodeOrderNotFound, "order not found",
 		)
 	}
 
@@ -60,7 +50,7 @@ func (s *PaymentService) InitiatePayment(orderID uint) (*dto.PaymentResponse, er
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"generate_reference_failed",
+			apperrors.CodeGenerateReference,
 			"failed to generate payment reference",
 			err,
 		)
@@ -77,7 +67,7 @@ func (s *PaymentService) InitiatePayment(orderID uint) (*dto.PaymentResponse, er
 	if err := s.paymentRepo.Create(payment); err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"create_payment_failed",
+			apperrors.CodeCreatePayment,
 			"failed to create payment",
 			err,
 		)
@@ -89,46 +79,26 @@ func (s *PaymentService) InitiatePayment(orderID uint) (*dto.PaymentResponse, er
 func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.PaymentResponse, error) {
 	payment, err := s.paymentRepo.GetByReference(reference)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"payment_not_found",
-				"payment not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_payment_failed",
-			"failed to fetch payment",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchPayment, "failed to fetch payment",
+			apperrors.CodePaymentNotFound, "payment not found",
 		)
 	}
 
 	order, err := s.orderRepo.GetOrderByID(payment.OrderID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"order_not_found",
-				"order not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_order_failed",
-			"failed to fetch order",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchOrder, "failed to fetch order",
+			apperrors.CodeOrderNotFound, "order not found",
 		)
 	}
 
 	if order.UserID != userID {
 		return nil, apperrors.New(
 			http.StatusNotFound,
-			"payment_not_found",
+			apperrors.CodePaymentNotFound,
 			"payment not found",
 			nil,
 		)
@@ -143,7 +113,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_cart_failed",
+			apperrors.CodeFetchCart,
 			"failed to fetch cart",
 			err,
 		)
@@ -160,7 +130,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 		if err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"update_payment_failed",
+				apperrors.CodeUpdatePayment,
 				"failed to update payment",
 				err,
 			)
@@ -176,7 +146,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return apperrors.New(
 						http.StatusNotFound,
-						"product_not_found",
+						apperrors.CodeProductNotFound,
 						"product not found",
 						err,
 					)
@@ -185,7 +155,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 				if errors.Is(err, repositories.ErrInsufficientStock) {
 					return apperrors.New(
 						http.StatusConflict,
-						"insufficient_stock",
+						apperrors.CodeInsufficientStock,
 						"insufficient stock",
 						err,
 					)
@@ -193,7 +163,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 
 				return apperrors.New(
 					http.StatusInternalServerError,
-					"update_product_failed",
+					apperrors.CodeUpdateProduct,
 					"failed to update product",
 					err,
 				)
@@ -203,7 +173,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 		if err := s.cartRepo.ClearCartTx(tx, cart.ID); err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"clear_cart_failed",
+				apperrors.CodeClearCart,
 				"failed to clear cart",
 				err,
 			)
@@ -216,7 +186,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 		); err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"update_order_failed",
+				apperrors.CodeUpdateOrder,
 				"failed to update order",
 				err,
 			)
@@ -231,20 +201,10 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 
 	payment, err = s.paymentRepo.GetByReference(reference)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"payment_not_found",
-				"payment not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_payment_failed",
-			"failed to fetch payment",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchPayment, "failed to fetch payment",
+			apperrors.CodePaymentNotFound, "payment not found",
 		)
 	}
 
@@ -254,37 +214,26 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 func (s *PaymentService) GetPayment(userID uint, reference string) (*dto.PaymentResponse, error) {
 	payment, err := s.paymentRepo.GetByReference(reference)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"payment_not_found",
-				"payment not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_payment_failed",
-			"failed to fetch payment",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchPayment, "failed to fetch payment",
+			apperrors.CodePaymentNotFound, "payment not found",
 		)
 	}
 
 	order, err := s.orderRepo.GetOrderByID(payment.OrderID)
 	if err != nil {
-		return nil, apperrors.New(
-			http.StatusNotFound,
-			"payment_not_found",
-			"payment not found",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchPayment, "failed to fetch payment",
+			apperrors.CodePaymentNotFound, "payment not found",
 		)
 	}
 
 	if order.UserID != userID {
 		return nil, apperrors.New(
 			http.StatusNotFound,
-			"payment_not_found",
+			apperrors.CodePaymentNotFound,
 			"payment not found",
 			nil,
 		)

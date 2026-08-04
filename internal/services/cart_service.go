@@ -30,7 +30,7 @@ func (s *CartService) GetCart(userID uint) (*models.Cart, error) {
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_cart_failed",
+			apperrors.CodeFetchCart,
 			"failed to fetch cart",
 			err,
 		)
@@ -41,7 +41,7 @@ func (s *CartService) GetCart(userID uint) (*models.Cart, error) {
 	if err := s.cartRepo.Create(newCart); err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"create_cart_failed",
+			apperrors.CodeCreateCart,
 			"failed to create cart",
 			err,
 		)
@@ -51,7 +51,7 @@ func (s *CartService) GetCart(userID uint) (*models.Cart, error) {
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_cart_failed",
+			apperrors.CodeFetchCart,
 			"failed to fetch cart",
 			err,
 		)
@@ -74,7 +74,7 @@ func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.Ca
 	if req.Quantity <= 0 {
 		return nil, apperrors.New(
 			http.StatusBadRequest,
-			"invalid_quantity",
+			apperrors.CodeInvalidQuantity,
 			"quantity must be greater than zero",
 			nil,
 		)
@@ -82,20 +82,10 @@ func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.Ca
 
 	product, err := s.productRepo.GetByID(req.ProductID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"product_not_found",
-				"product not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_product_failed",
-			"failed to fetch product",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchProduct, "failed to fetch product",
+			apperrors.CodeProductNotFound, "product not found",
 		)
 	}
 
@@ -110,7 +100,7 @@ func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.Ca
 		if existingMerchantID != product.MerchantID {
 			return nil, apperrors.New(
 				http.StatusConflict,
-				"multiple_merchants_not_supported",
+				apperrors.CodeMultipleMerchants,
 				"you can only add products from one merchant to your cart",
 				nil,
 			)
@@ -132,7 +122,7 @@ func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.Ca
 		if product.Stock < newQty {
 			return nil, apperrors.New(
 				http.StatusBadRequest,
-				"insufficient_stock",
+				apperrors.CodeInsufficientStock,
 				"insufficient stock for the requested quantity",
 				nil,
 			)
@@ -144,7 +134,7 @@ func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.Ca
 		if err := s.cartRepo.UpdateItem(existing); err != nil {
 			return nil, apperrors.New(
 				http.StatusInternalServerError,
-				"update_cart_item_failed",
+				apperrors.CodeUpdateCartItem,
 				"failed to update cart item",
 				err,
 			)
@@ -154,7 +144,7 @@ func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.Ca
 		if product.Stock < req.Quantity {
 			return nil, apperrors.New(
 				http.StatusConflict,
-				"insufficient_stock",
+				apperrors.CodeInsufficientStock,
 				"insufficient stock for the requested quantity",
 				nil,
 			)
@@ -170,7 +160,7 @@ func (s *CartService) AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.Ca
 		if err := s.cartRepo.AddItem(newItem); err != nil {
 			return nil, apperrors.New(
 				http.StatusInternalServerError,
-				"add_cart_item_failed",
+				apperrors.CodeAddCartItem,
 				"failed to add item to cart",
 				err,
 			)
@@ -191,7 +181,7 @@ func (s *CartService) recalculateCart(cartID uint, userID uint) (*models.Cart, e
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_cart_failed",
+			apperrors.CodeFetchCart,
 			"failed to fetch cart",
 			err,
 		)
@@ -218,7 +208,7 @@ func (s *CartService) recalculateCart(cartID uint, userID uint) (*models.Cart, e
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_cart_failed",
+			apperrors.CodeFetchCart,
 			"failed to fetch cart",
 			err,
 		)
@@ -231,7 +221,7 @@ func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*dto.CartRes
 	if qty <= 0 {
 		return nil, apperrors.New(
 			http.StatusBadRequest,
-			"invalid_quantity",
+			apperrors.CodeInvalidQuantity,
 			"quantity must be a positive integer",
 			nil,
 		)
@@ -249,27 +239,17 @@ func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*dto.CartRes
 
 			product, err := s.productRepo.GetByID(item.ProductID)
 			if err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return nil, apperrors.New(
-						http.StatusNotFound,
-						"product_not_found",
-						"product not found",
-						err,
-					)
-				}
-
-				return nil, apperrors.New(
-					http.StatusInternalServerError,
-					"fetch_product_failed",
-					"failed to fetch product",
+				return nil, repoErr(
 					err,
+					apperrors.CodeFetchProduct, "failed to fetch product",
+					apperrors.CodeProductNotFound, "product not found",
 				)
 			}
 
 			if product.Stock < qty {
 				return nil, apperrors.New(
 					http.StatusConflict,
-					"insufficient_stock",
+					apperrors.CodeInsufficientStock,
 					"insufficient stock for the requested quantity",
 					nil,
 				)
@@ -280,7 +260,7 @@ func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*dto.CartRes
 			if err := s.cartRepo.UpdateItem(item); err != nil {
 				return nil, apperrors.New(
 					http.StatusInternalServerError,
-					"update_cart_item_failed",
+					apperrors.CodeUpdateCartItem,
 					"failed to update cart item",
 					err,
 				)
@@ -297,7 +277,7 @@ func (s *CartService) UpdateCartItem(userID, itemID uint, qty int) (*dto.CartRes
 
 	return nil, apperrors.New(
 		http.StatusNotFound,
-		"cart_item_not_found",
+		apperrors.CodeCartItemNotFound,
 		"cart item not found",
 		nil,
 	)
@@ -322,7 +302,7 @@ func (s *CartService) RemoveFromCart(userID, itemID uint) (*dto.CartResponse, er
 	if existing == nil {
 		return nil, apperrors.New(
 			http.StatusNotFound,
-			"cart_item_not_found",
+			apperrors.CodeCartItemNotFound,
 			"cart item not found",
 			nil,
 		)
@@ -332,7 +312,7 @@ func (s *CartService) RemoveFromCart(userID, itemID uint) (*dto.CartResponse, er
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperrors.New(
 				http.StatusNotFound,
-				"cart_item_not_found",
+				apperrors.CodeCartItemNotFound,
 				"cart item not found",
 				err,
 			)
@@ -340,7 +320,7 @@ func (s *CartService) RemoveFromCart(userID, itemID uint) (*dto.CartResponse, er
 
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"remove_cart_item_failed",
+			apperrors.CodeRemoveCartItem,
 			"failed to remove cart item",
 			err,
 		)

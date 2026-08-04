@@ -37,20 +37,10 @@ func NewMerchantService(
 func (s *MerchantService) getMerchant(userID uint) (*models.Merchant, error) {
 	merchant, err := s.merchantRepo.GetByUserID(userID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"merchant_not_found",
-				"merchant profile not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_merchant_failed",
-			"failed to fetch merchant profile",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchMerchant, "failed to fetch merchant profile",
+			apperrors.CodeMerchantNotFound, "merchant profile not found",
 		)
 	}
 
@@ -71,7 +61,7 @@ func (s *MerchantService) RegisterMerchant(
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return apperrors.New(
 					http.StatusNotFound,
-					"user_not_found",
+					apperrors.CodeUserNotFound,
 					"user not found",
 					err,
 				)
@@ -79,7 +69,7 @@ func (s *MerchantService) RegisterMerchant(
 
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"fetch_user_failed",
+				apperrors.CodeFetchUser,
 				"failed to fetch user",
 				err,
 			)
@@ -99,7 +89,7 @@ func (s *MerchantService) RegisterMerchant(
 			if errors.Is(err, gorm.ErrDuplicatedKey) {
 				return apperrors.New(
 					http.StatusConflict,
-					"merchant_exists",
+					apperrors.CodeMerchantExists,
 					"user is already a merchant",
 					err,
 				)
@@ -107,7 +97,7 @@ func (s *MerchantService) RegisterMerchant(
 
 			return apperrors.New(
 				http.StatusInternalServerError,
-				"create_merchant_failed",
+				apperrors.CodeCreateMerchant,
 				"failed to create merchant",
 				err,
 			)
@@ -126,20 +116,10 @@ func (s *MerchantService) RegisterMerchant(
 func (s *MerchantService) GetProfile(userID uint) (*dto.MerchantResponse, error) {
 	merchant, err := s.merchantRepo.GetByUserID(userID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"merchant_not_found",
-				"merchant profile not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_merchant_failed",
-			"failed to fetch merchant profile",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchMerchant, "failed to fetch merchant profile",
+			apperrors.CodeMerchantNotFound, "merchant profile not found",
 		)
 	}
 
@@ -153,20 +133,10 @@ func (s *MerchantService) UpdateProfile(
 
 	merchant, err := s.merchantRepo.GetByUserID(userID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"merchant_not_found",
-				"merchant profile not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_merchant_failed",
-			"failed to fetch merchant profile",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchMerchant, "failed to fetch merchant profile",
+			apperrors.CodeMerchantNotFound, "merchant profile not found",
 		)
 	}
 
@@ -189,7 +159,7 @@ func (s *MerchantService) UpdateProfile(
 	if err := s.merchantRepo.Update(merchant); err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"update_merchant_failed",
+			apperrors.CodeUpdateMerchant,
 			"failed to update merchant profile",
 			err,
 		)
@@ -211,7 +181,7 @@ func (s *MerchantService) GetOrders(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_orders_failed",
+			apperrors.CodeFetchOrders,
 			"failed to fetch orders",
 			err,
 		)
@@ -232,20 +202,10 @@ func (s *MerchantService) GetOrder(
 
 	order, err := s.orderRepo.GetMerchantOrderByID(merchant.ID, orderID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.New(
-				http.StatusNotFound,
-				"order_not_found",
-				"order not found",
-				err,
-			)
-		}
-
-		return nil, apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_order_failed",
-			"failed to fetch order",
+		return nil, repoErr(
 			err,
+			apperrors.CodeFetchOrder, "failed to fetch order",
+			apperrors.CodeOrderNotFound, "order not found",
 		)
 	}
 
@@ -268,21 +228,10 @@ func (s *MerchantService) UpdateOrderStatus(
 		orderID,
 	)
 	if err != nil {
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return apperrors.New(
-				http.StatusNotFound,
-				"order_not_found",
-				"order not found",
-				err,
-			)
-		}
-
-		return apperrors.New(
-			http.StatusInternalServerError,
-			"fetch_order_failed",
-			"failed to fetch order",
+		return repoErr(
 			err,
+			apperrors.CodeFetchOrder, "failed to fetch order",
+			apperrors.CodeOrderNotFound, "order not found",
 		)
 	}
 
@@ -336,7 +285,7 @@ func (s *MerchantService) GetDashboard(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_dashboard_failed",
+			apperrors.CodeFetchDashboard,
 			"failed to fetch dashboard",
 			err,
 		)
@@ -349,7 +298,7 @@ func (s *MerchantService) GetDashboard(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_dashboard_failed",
+			apperrors.CodeFetchDashboard,
 			"failed to fetch dashboard",
 			err,
 		)
@@ -359,7 +308,7 @@ func (s *MerchantService) GetDashboard(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_dashboard_failed",
+			apperrors.CodeFetchDashboard,
 			"failed to fetch dashboard",
 			err,
 		)
@@ -372,7 +321,7 @@ func (s *MerchantService) GetDashboard(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_dashboard_failed",
+			apperrors.CodeFetchDashboard,
 			"failed to fetch dashboard",
 			err,
 		)
@@ -385,7 +334,7 @@ func (s *MerchantService) GetDashboard(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_dashboard_failed",
+			apperrors.CodeFetchDashboard,
 			"failed to fetch dashboard",
 			err,
 		)
@@ -395,7 +344,7 @@ func (s *MerchantService) GetDashboard(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_dashboard_failed",
+			apperrors.CodeFetchDashboard,
 			"failed to fetch dashboard",
 			err,
 		)
@@ -408,7 +357,7 @@ func (s *MerchantService) GetDashboard(
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
-			"fetch_dashboard_failed",
+			apperrors.CodeFetchDashboard,
 			"failed to fetch dashboard",
 			err,
 		)
