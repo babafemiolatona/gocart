@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -41,8 +42,63 @@ type Config struct {
 
 var CFG *Config
 
-func LoadConfig() {
+func LoadConfig() (*Config, error) {
 	loadEnv()
+
+	cfg := &Config{
+		UploadDir:        optionalEnv("UPLOAD_DIR", "./uploads"),
+		SeedAdminEmail:    optionalEnv("SEED_ADMIN_EMAIL", ""),
+		SeedAdminPassword: optionalEnv("SEED_ADMIN_PASSWORD", ""),
+		MinioUseSSL:      optionalEnv("MINIO_USE_SSL", "false") == "true",
+	}
+
+	for _, r := range []struct {
+		key string
+		dst *string
+	}{
+		{"SERVER_PORT", &cfg.ServerPort},
+		{"ENV", &cfg.Env},
+		{"DB_HOST", &cfg.DatabaseHost},
+		{"DB_PORT", &cfg.DatabasePort},
+		{"DB_USER", &cfg.DatabaseUser},
+		{"DB_PASSWORD", &cfg.DatabasePassword},
+		{"DB_NAME", &cfg.DatabaseName},
+		{"DB_SSL_MODE", &cfg.DatabaseSSLMode},
+		{"JWT_SECRET", &cfg.JWTSecret},
+		{"MINIO_ENDPOINT", &cfg.MinioEndpoint},
+		{"MINIO_ACCESS_KEY", &cfg.MinioAccessKey},
+		{"MINIO_SECRET_KEY", &cfg.MinioSecretKey},
+		{"MINIO_BUCKET", &cfg.MinioBucket},
+	} {
+		value, err := requiredEnv(r.key)
+		if err != nil {
+			return nil, err
+		}
+		*r.dst = value
+	}
+
+	cfg.ServerPort = ":" + cfg.ServerPort
+
+	jwtExpiry, err := durationEnv("JWT_EXPIRY")
+	if err != nil {
+		return nil, err
+	}
+	cfg.JWTExpiry = jwtExpiry
+
+	maxUploadSize, err := intEnv("MAX_UPLOAD_SIZE")
+	if err != nil {
+		return nil, err
+	}
+	cfg.MaxUploadSize = int64(maxUploadSize)
+
+	tokenMinutes, err := strconv.Atoi(optionalEnv("TOKEN_DURATION_MINUTES", "60"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid TOKEN_DURATION_MINUTES: %w", err)
+	}
+	cfg.TokenDurationMinutes = tokenMinutes
+
+	CFG = cfg
+	return cfg, nil
 }
 
 func loadEnv() {
@@ -51,37 +107,6 @@ func loadEnv() {
 			logger.Log.Warn().Err(err).Msg("warning: .env file not found")
 		}
 	}
-
-	CFG = &Config{
-		ServerPort:       ":" + getEnv("SERVER_PORT"),
-		Env:              getEnv("ENV"),
-		DatabaseHost:     getEnv("DB_HOST"),
-		DatabasePort:     getEnv("DB_PORT"),
-		DatabaseUser:     getEnv("DB_USER"),
-		DatabasePassword: getEnv("DB_PASSWORD"),
-		DatabaseName:     getEnv("DB_NAME"),
-		DatabaseSSLMode:  getEnv("DB_SSL_MODE"),
-		JWTSecret:        getEnv("JWT_SECRET"),
-		JWTExpiry:        parseDuration(getEnv("JWT_EXPIRY")),
-		UploadDir:        getEnvOptional("UPLOAD_DIR", "./uploads"),
-		MaxUploadSize:    int64(getEnvInt("MAX_UPLOAD_SIZE")),
-
-		SeedAdminEmail:    getEnvOptional("SEED_ADMIN_EMAIL", ""),
-		SeedAdminPassword: getEnvOptional("SEED_ADMIN_PASSWORD", ""),
-
-		// MinIO
-		MinioEndpoint:  getEnv("MINIO_ENDPOINT"),
-		MinioAccessKey: getEnv("MINIO_ACCESS_KEY"),
-		MinioSecretKey: getEnv("MINIO_SECRET_KEY"),
-		MinioBucket:    getEnv("MINIO_BUCKET"),
-		MinioUseSSL:    getEnvOptional("MINIO_USE_SSL", "false") == "true",
-	}
-
-	tokenDurationMinutes, err := strconv.Atoi(getEnvOptional("TOKEN_DURATION_MINUTES", "60"))
-	if err != nil {
-		logger.Log.Fatal().Err(err).Msg("error parsing TOKEN_DURATION_MINUTES")
-	}
-	CFG.TokenDurationMinutes = tokenDurationMinutes
 }
 
 func (c *Config) GetDSN() string {
@@ -90,34 +115,43 @@ func (c *Config) GetDSN() string {
 		"/" + c.DatabaseName + "?sslmode=" + c.DatabaseSSLMode
 }
 
-func getEnv(key string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
+func requiredEnv(key string) (string, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return "", fmt.Errorf("required environment variable %s is not set", key)
 	}
-	logger.Log.Fatal().Str("variable", key).Msg("required environment variable is not set")
-	return ""
+	return value, nil
 }
 
-func getEnvOptional(key string, defaultValue string) string {
+func optionalEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
 	return defaultValue
 }
 
-func getEnvInt(key string) int {
-	value := getEnv(key)
+func intEnv(key string) (int, error) {
+	value, err := requiredEnv(key)
+	if err != nil {
+		return 0, err
+	}
+
 	intVal, err := strconv.Atoi(value)
 	if err != nil {
-		logger.Log.Fatal().Err(err).Str("variable", key).Msg("invalid integer value for environment variable")
+		return 0, fmt.Errorf("invalid integer value for %s: %w", key, err)
 	}
-	return intVal
+	return intVal, nil
 }
 
-func parseDuration(value string) time.Duration {
+func durationEnv(key string) (time.Duration, error) {
+	value, err := requiredEnv(key)
+	if err != nil {
+		return 0, err
+	}
+
 	duration, err := time.ParseDuration(value)
 	if err != nil {
-		logger.Log.Fatal().Err(err).Str("value", value).Msg("invalid duration format")
+		return 0, fmt.Errorf("invalid duration value for %s: %w", key, err)
 	}
-	return duration
+	return duration, nil
 }

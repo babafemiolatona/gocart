@@ -34,27 +34,30 @@ import (
 
 func main() {
 	// Load configuration
-	config.LoadConfig()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		logger.Log.Fatal().Err(err).Msg("failed to load configuration")
+	}
 
 	// Initialize database
-	db, err := repositories.InitDB(config.CFG)
+	db, err := repositories.InitDB(cfg)
 	if err != nil {
 		logger.Log.Fatal().Err(err).Msg("failed to initialize database")
 	}
 
 	logger.Log.Info().
-		Str("endpoint", config.CFG.MinioEndpoint).
-		Str("bucket", config.CFG.MinioBucket).
-		Bool("use_ssl", config.CFG.MinioUseSSL).
+		Str("endpoint", cfg.MinioEndpoint).
+		Str("bucket", cfg.MinioBucket).
+		Bool("use_ssl", cfg.MinioUseSSL).
 		Msg("minio configuration")
 
 	// Initialize MinIO
 	minioStorage, err := storage.NewMinioStorage(
-		config.CFG.MinioEndpoint,
-		config.CFG.MinioAccessKey,
-		config.CFG.MinioSecretKey,
-		config.CFG.MinioBucket,
-		config.CFG.MinioUseSSL,
+		cfg.MinioEndpoint,
+		cfg.MinioAccessKey,
+		cfg.MinioSecretKey,
+		cfg.MinioBucket,
+		cfg.MinioUseSSL,
 	)
 	if err != nil {
 		logger.Log.Fatal().Err(err).Msg("failed to initialize minio")
@@ -65,16 +68,16 @@ func main() {
 
 	if err := seed.SeedAdmin(
 		authRepo,
-		config.CFG.SeedAdminEmail,
-		config.CFG.SeedAdminPassword,
+		cfg.SeedAdminEmail,
+		cfg.SeedAdminPassword,
 	); err != nil {
 		logger.Log.Fatal().Err(err).Msg("failed to seed admin")
 	}
 
-	AuthService := services.NewAuthService(authRepo, config.CFG)
+	AuthService := services.NewAuthService(authRepo, cfg)
 
 	// Set Gin mode
-	if config.CFG.Env == "production" {
+	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -89,12 +92,12 @@ func main() {
 	routes.SetupRoutes(router, db, AuthService, minioStorage)
 
 	srv := &http.Server{
-		Addr:    config.CFG.ServerPort,
+		Addr:    cfg.ServerPort,
 		Handler: router,
 	}
 
 	go func() {
-		logger.Log.Info().Str("port", config.CFG.ServerPort).Msg("starting server")
+		logger.Log.Info().Str("port", cfg.ServerPort).Msg("starting server")
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Log.Fatal().Err(err).Msg("failed to start server")
 		}
