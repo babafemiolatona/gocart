@@ -5,16 +5,15 @@ import (
 
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
-	"gocart/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	authService *services.AuthService
+	authService AuthService
 }
 
-func NewAuthHandler(authService *services.AuthService) *AuthHandler {
+func NewAuthHandler(authService AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
 }
 

@@ -6,16 +6,15 @@ import (
 
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
-	"gocart/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 type CategoryHandler struct {
-	categoryService *services.CategoryService
+	categoryService CategoryService
 }
 
-func NewCategoryHandler(categoryService *services.CategoryService) *CategoryHandler {
+func NewCategoryHandler(categoryService CategoryService) *CategoryHandler {
 	return &CategoryHandler{categoryService: categoryService}
 }
 

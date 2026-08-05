@@ -152,3 +152,27 @@ func TestDeleteCategoryNotFound(t *testing.T) {
 	err := svc.DeleteCategory(99)
 	assertAppError(t, err, http.StatusNotFound, apperrors.CodeCategoryNotFound)
 }
+
+func TestGetAllCategoriesRepoError(t *testing.T) {
+	repo := &stubCategoryRepo{
+		getAllFn: func() ([]models.Category, error) { return nil, errBoom },
+	}
+	svc := newTestCategoryService(repo)
+
+	_, err := svc.GetAllCategories()
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeFetchCategories)
+}
+
+func TestUpdateCategoryRepoError(t *testing.T) {
+	repo := &stubCategoryRepo{
+		getByIDFn: func(id uint) (*models.Category, error) {
+			return &models.Category{ID: 3, Name: "Old"}, nil
+		},
+		updateFn: func(id uint, values map[string]interface{}) error { return errBoom },
+	}
+	svc := newTestCategoryService(repo)
+
+	name := "New"
+	_, err := svc.UpdateCategory(&dto.UpdateCategoryRequest{Name: &name}, 3)
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeUpdateCategory)
+}

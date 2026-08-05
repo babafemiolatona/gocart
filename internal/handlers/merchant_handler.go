@@ -7,17 +7,16 @@ import (
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
 	"gocart/internal/query"
-	"gocart/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 type MerchantHandler struct {
-	merchantService *services.MerchantService
+	merchantService MerchantService
 }
 
 func NewMerchantHandler(
-	merchantService *services.MerchantService,
+	merchantService MerchantService,
 ) *MerchantHandler {
 	return &MerchantHandler{
 		merchantService: merchantService,

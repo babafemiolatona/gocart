@@ -3,16 +3,14 @@ package handlers
 import (
 	"net/http"
 
-	"gocart/internal/services"
-
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
-	userService *services.UserService
+	userService UserService
 }
 
-func NewUserHandler(userService *services.UserService) *UserHandler {
+func NewUserHandler(userService UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
 

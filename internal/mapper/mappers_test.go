@@ -279,3 +279,153 @@ func TestToMerchantRecentOrderResponse(t *testing.T) {
 		t.Errorf("recent order fields not copied: %+v", resp)
 	}
 }
+
+func TestToCategoryResponses(t *testing.T) {
+	categories := []models.Category{
+		{ID: 1, Name: "Electronics", Slug: "electronics"},
+		{ID: 2, Name: "Books", Slug: "books"},
+	}
+
+	resp := ToCategoryResponses(categories)
+
+	if len(resp) != 2 {
+		t.Fatalf("expected 2 responses, got %d", len(resp))
+	}
+	if resp[0].ID != 1 || resp[0].Name != "Electronics" || resp[0].Slug != "electronics" {
+		t.Errorf("first category not copied: %+v", resp[0])
+	}
+	if resp[1].ID != 2 || resp[1].Name != "Books" {
+		t.Errorf("second category not copied: %+v", resp[1])
+	}
+}
+
+func TestToCategoryResponsesEmpty(t *testing.T) {
+	if resp := ToCategoryResponses(nil); len(resp) != 0 {
+		t.Errorf("expected empty slice, got %+v", resp)
+	}
+}
+
+func TestToMerchantOrderResponse(t *testing.T) {
+	created := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+	order := &models.Order{
+		ID:              10,
+		Status:          models.OrderStatusConfirmed,
+		Total:           2998,
+		ShippingAddress: "2 Oak Ave",
+		CreatedAt:       created,
+		UpdatedAt:       created,
+		Items: []models.OrderItem{
+			{ID: 1, ProductID: 2, ProductName: "Widget", Quantity: 2, Price: 1499},
+		},
+	}
+
+	resp := ToMerchantOrderResponse(order)
+
+	if resp.ID != 10 || resp.Status != "confirmed" || resp.Total != 29.98 {
+		t.Errorf("unexpected merchant order response: %+v", resp)
+	}
+	if resp.ShippingAddress != "2 Oak Ave" || !resp.CreatedAt.Equal(created) || !resp.UpdatedAt.Equal(created) {
+		t.Errorf("order fields not copied: %+v", resp)
+	}
+	if len(resp.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(resp.Items))
+	}
+	item := resp.Items[0]
+	if item.ID != 1 || item.ProductID != 2 || item.ProductName != "Widget" || item.Quantity != 2 || item.Price != 14.99 {
+		t.Errorf("item not copied: %+v", item)
+	}
+}
+
+func TestToMerchantOrderResponseNoItems(t *testing.T) {
+	resp := ToMerchantOrderResponse(&models.Order{ID: 1, Status: models.OrderStatusPending})
+	if len(resp.Items) != 0 {
+		t.Errorf("expected empty items, got %+v", resp.Items)
+	}
+}
+
+func TestToMerchantOrderResponses(t *testing.T) {
+	orders := []models.Order{
+		{ID: 1, Status: models.OrderStatusConfirmed, Total: 1000},
+		{ID: 2, Status: models.OrderStatusShipped, Total: 2000},
+	}
+
+	resp := ToMerchantOrderResponses(orders)
+
+	if len(resp) != 2 {
+		t.Fatalf("expected 2 responses, got %d", len(resp))
+	}
+	if resp[0].ID != 1 || resp[0].Total != 10 {
+		t.Errorf("first order not copied: %+v", resp[0])
+	}
+	if resp[1].ID != 2 || resp[1].Status != "shipped" || resp[1].Total != 20 {
+		t.Errorf("second order not copied: %+v", resp[1])
+	}
+}
+
+func TestToMerchantRecentOrderResponses(t *testing.T) {
+	orders := []models.Order{
+		{ID: 1, User: models.User{Email: "a@example.com"}, Status: models.OrderStatusShipped, Total: 2500, Items: []models.OrderItem{{}}},
+		{ID: 2, User: models.User{Email: "b@example.com"}, Status: models.OrderStatusConfirmed, Total: 1000},
+	}
+
+	resp := ToMerchantRecentOrderResponses(orders)
+
+	if len(resp) != 2 {
+		t.Fatalf("expected 2 responses, got %d", len(resp))
+	}
+	if resp[0].Customer != "a@example.com" || resp[0].Total != 25 || resp[0].ItemCount != 1 {
+		t.Errorf("first recent order not copied: %+v", resp[0])
+	}
+	if resp[1].Customer != "b@example.com" || resp[1].ItemCount != 0 {
+		t.Errorf("second recent order not copied: %+v", resp[1])
+	}
+}
+
+func TestToOrderCheckoutResponse(t *testing.T) {
+	order := &models.Order{
+		ID:              4,
+		Status:          models.OrderStatusPending,
+		Total:           1999,
+		ShippingAddress: "1 Main St",
+		Items: []models.OrderItem{
+			{ProductID: 2, ProductName: "Widget", Quantity: 1, Price: 1999},
+		},
+	}
+
+	resp := ToOrderCheckoutResponse(order)
+
+	if resp.ID != 4 || resp.Status != "pending" || resp.Total != 19.99 {
+		t.Errorf("unexpected checkout response: %+v", resp)
+	}
+	if resp.ShippingAddress != "1 Main St" {
+		t.Errorf("shipping address not copied: %+v", resp)
+	}
+	if len(resp.Items) != 1 || resp.Items[0].ProductName != "Widget" || resp.Items[0].Price != 19.99 {
+		t.Errorf("items not copied: %+v", resp.Items)
+	}
+}
+
+func TestToProductResponses(t *testing.T) {
+	products := []models.Product{
+		{ID: 1, Name: "Laptop", Price: 149999, Stock: 5},
+		{ID: 2, Name: "Mouse", Price: 1999, Stock: 0},
+	}
+
+	resp := ToProductResponses(products)
+
+	if len(resp) != 2 {
+		t.Fatalf("expected 2 responses, got %d", len(resp))
+	}
+	if resp[0].ID != 1 || resp[0].Name != "Laptop" || resp[0].Price != 1499.99 || resp[0].Stock != 5 {
+		t.Errorf("first product not copied: %+v", resp[0])
+	}
+	if resp[1].ID != 2 || resp[1].Name != "Mouse" || resp[1].Price != 19.99 || resp[1].Stock != 0 {
+		t.Errorf("second product not copied: %+v", resp[1])
+	}
+}
+
+func TestToProductResponsesEmpty(t *testing.T) {
+	if resp := ToProductResponses(nil); len(resp) != 0 {
+		t.Errorf("expected empty slice, got %+v", resp)
+	}
+}

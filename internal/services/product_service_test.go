@@ -173,7 +173,7 @@ func TestUpdateProductNotOwner(t *testing.T) {
 	svc := newTestProductService(productRepo, &stubCategoryRepo{}, nil)
 
 	price := 20.0
-	_, err := svc.UpdateProduct(1, 1, &dto.UpdateProductRequest{Price: &price}, nil)
+	_, err := svc.UpdateProduct(1, 7, &dto.UpdateProductRequest{Price: &price}, nil)
 	assertAppError(t, err, http.StatusForbidden, apperrors.CodeForbidden)
 }
 
@@ -390,4 +390,129 @@ func TestCreateProductImagesSaveRollsBack(t *testing.T) {
 	if len(deleted) != 1 || deleted[0] != "/images/a.png" {
 		t.Errorf("expected uploaded object to be deleted, got %v", deleted)
 	}
+}
+
+func TestGetProductRepoError(t *testing.T) {
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) { return nil, errBoom },
+	}
+	svc := newTestProductService(productRepo, &stubCategoryRepo{}, nil)
+
+	_, err := svc.GetProduct(1)
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeFetchProduct)
+}
+
+func TestGetMerchantProductRepoError(t *testing.T) {
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) { return nil, errBoom },
+	}
+	svc := newTestProductService(productRepo, &stubCategoryRepo{}, nil)
+
+	_, err := svc.GetMerchantProduct(1, 1)
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeFetchProduct)
+}
+
+func TestDeleteProductRepoError(t *testing.T) {
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) { return nil, errBoom },
+	}
+	svc := newTestProductService(productRepo, &stubCategoryRepo{}, nil)
+
+	err := svc.DeleteProduct(1, 1)
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeFetchProduct)
+}
+
+func TestDeleteProductDeleteFails(t *testing.T) {
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) {
+			return &models.Product{ID: 1, MerchantID: 1}, nil
+		},
+		deleteFn: func(id uint) error { return errBoom },
+	}
+	svc := newTestProductService(productRepo, &stubCategoryRepo{}, nil)
+
+	err := svc.DeleteProduct(1, 1)
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeDeleteProduct)
+}
+
+func TestDeleteProductStorageErrorStillSucceeds(t *testing.T) {
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) {
+			return &models.Product{
+				ID: 1, MerchantID: 1,
+				Images: []models.ProductImage{{ImageURL: "/img/a.png"}},
+			}, nil
+		},
+		deleteFn: func(id uint) error { return nil },
+	}
+	storage := &stubStorage{
+		deleteFn: func(objectName string) error { return errBoom },
+	}
+	svc := NewProductService(productRepo, &stubCategoryRepo{}, &stubProductImageRepo{}, storage, 10*1024*1024)
+
+	if err := svc.DeleteProduct(1, 1); err != nil {
+		t.Fatalf("expected delete to succeed despite storage error, got %v", err)
+	}
+}
+
+func TestUpdateProductDuplicate(t *testing.T) {
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) {
+			return &models.Product{ID: 1, MerchantID: 1}, nil
+		},
+		updateFn: func(id uint, values map[string]interface{}) error { return repositories.ErrDuplicate },
+	}
+	svc := newTestProductService(productRepo, &stubCategoryRepo{}, nil)
+
+	sku := "DUP"
+	_, err := svc.UpdateProduct(1, 1, &dto.UpdateProductRequest{Sku: &sku}, nil)
+	assertAppError(t, err, http.StatusConflict, apperrors.CodeProductExists)
+}
+
+func TestUpdateProductRepoError(t *testing.T) {
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) {
+			return &models.Product{ID: 1, MerchantID: 1}, nil
+		},
+		updateFn: func(id uint, values map[string]interface{}) error { return errBoom },
+	}
+	svc := newTestProductService(productRepo, &stubCategoryRepo{}, nil)
+
+	sku := "NEW"
+	_, err := svc.UpdateProduct(1, 1, &dto.UpdateProductRequest{Sku: &sku}, nil)
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeUpdateProduct)
+}
+
+func TestUpdateProductImageTooLarge(t *testing.T) {
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) {
+			return &models.Product{ID: 1, MerchantID: 1}, nil
+		},
+		updateFn: func(id uint, values map[string]interface{}) error { return nil },
+	}
+	svc := newTestProductService(productRepo, &stubCategoryRepo{}, nil)
+
+	image := newImageHeader(t, "photo.png")
+	image.Size = 10*1024*1024 + 1
+
+	_, err := svc.UpdateProduct(1, 1, &dto.UpdateProductRequest{}, []*multipart.FileHeader{image})
+	assertAppError(t, err, http.StatusBadRequest, apperrors.CodeFileTooLarge)
+}
+
+func TestUpdateProductImageUploadFails(t *testing.T) {
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) {
+			return &models.Product{ID: 1, MerchantID: 1}, nil
+		},
+		updateFn: func(id uint, values map[string]interface{}) error { return nil },
+	}
+	storage := &stubStorage{
+		uploadFn: func(file multipart.File, header *multipart.FileHeader, productID uint) (string, error) {
+			return "", errBoom
+		},
+	}
+	svc := NewProductService(productRepo, &stubCategoryRepo{}, &stubProductImageRepo{}, storage, 10*1024*1024)
+
+	_, err := svc.UpdateProduct(1, 1, &dto.UpdateProductRequest{}, []*multipart.FileHeader{newImageHeader(t, "photo.png")})
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeUploadImages)
 }

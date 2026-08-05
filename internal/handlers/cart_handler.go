@@ -3,7 +3,6 @@ package handlers
 import (
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
-	"gocart/internal/services"
 	"net/http"
 	"strconv"
 
@@ -11,10 +10,10 @@ import (
 )
 
 type CartHandler struct {
-	cartService *services.CartService
+	cartService CartService
 }
 
-func NewCartHandler(cartService *services.CartService) *CartHandler {
+func NewCartHandler(cartService CartService) *CartHandler {
 	return &CartHandler{cartService: cartService}
 }
 

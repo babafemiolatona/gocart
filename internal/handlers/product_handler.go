@@ -8,16 +8,15 @@ import (
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
 	"gocart/internal/query"
-	"gocart/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 type ProductHandler struct {
-	productService *services.ProductService
+	productService ProductService
 }
 
-func NewProductHandler(productService *services.ProductService) *ProductHandler {
+func NewProductHandler(productService ProductService) *ProductHandler {
 	return &ProductHandler{productService: productService}
 }
 

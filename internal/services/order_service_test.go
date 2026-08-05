@@ -377,3 +377,123 @@ func TestGetUserOrders(t *testing.T) {
 		t.Errorf("unexpected paginated response: %+v", resp)
 	}
 }
+
+func TestCheckoutValidateCartProductNotFound(t *testing.T) {
+	cartRepo := &stubCartRepo{
+		getWithItemsFn: func(userID uint) (*models.Cart, error) { return testCartWithItems(), nil },
+	}
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) { return nil, repositories.ErrRecordNotFound },
+	}
+	svc := newTestOrderService(nil, &stubOrderRepo{}, cartRepo, productRepo, &stubPaymentRepo{})
+
+	_, err := svc.ProcessCheckout(1, "1 Main St", "")
+	assertAppError(t, err, http.StatusNotFound, apperrors.CodeProductNotFound)
+}
+
+func TestCheckoutValidateCartFetchFails(t *testing.T) {
+	cartRepo := &stubCartRepo{
+		getWithItemsFn: func(userID uint) (*models.Cart, error) { return testCartWithItems(), nil },
+	}
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) { return nil, errBoom },
+	}
+	svc := newTestOrderService(nil, &stubOrderRepo{}, cartRepo, productRepo, &stubPaymentRepo{})
+
+	_, err := svc.ProcessCheckout(1, "1 Main St", "")
+	assertAppError(t, err, http.StatusInternalServerError, "fetch_product_failed")
+}
+
+func TestCheckoutIdempotencyLookupFails(t *testing.T) {
+	orderRepo := &stubOrderRepo{
+		getByIdemFn: func(userID uint, key string) (*models.Order, error) { return nil, errBoom },
+	}
+	svc := newTestOrderService(nil, orderRepo, &stubCartRepo{}, &stubProductRepo{}, &stubPaymentRepo{})
+
+	_, err := svc.ProcessCheckout(1, "1 Main St", "key-123")
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeFetchOrder)
+}
+
+func TestCheckoutOrderCreateFails(t *testing.T) {
+	orderRepo := &stubOrderRepo{
+		createFn: func(o *models.Order) error { return errBoom },
+	}
+	cartRepo := &stubCartRepo{
+		getWithItemsFn: func(userID uint) (*models.Cart, error) { return testCartWithItems(), nil },
+	}
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) {
+			return &models.Product{ID: 3, MerchantID: 1, Stock: 10, Price: 1999}, nil
+		},
+	}
+	svc := newTestOrderService(nil, orderRepo, cartRepo, productRepo, &stubPaymentRepo{})
+
+	_, err := svc.ProcessCheckout(1, "1 Main St", "")
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeCreateOrder)
+}
+
+func TestCheckoutPaymentCreateFails(t *testing.T) {
+	orderRepo := &stubOrderRepo{
+		createFn: func(o *models.Order) error { o.ID = 1; return nil },
+	}
+	paymentRepo := &stubPaymentRepo{
+		createFn: func(p *models.Payment) error { return errBoom },
+	}
+	cartRepo := &stubCartRepo{
+		getWithItemsFn: func(userID uint) (*models.Cart, error) { return testCartWithItems(), nil },
+	}
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) {
+			return &models.Product{ID: 3, MerchantID: 1, Stock: 10, Price: 1999}, nil
+		},
+	}
+	svc := newTestOrderService(nil, orderRepo, cartRepo, productRepo, paymentRepo)
+
+	_, err := svc.ProcessCheckout(1, "1 Main St", "")
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeCreatePayment)
+}
+
+func TestCheckoutConflictRecoveryOrderFetchFails(t *testing.T) {
+	orderRepo := &stubOrderRepo{
+		createFn: func(o *models.Order) error { return repositories.ErrDuplicate },
+		getByIdemFn: func(userID uint, key string) (*models.Order, error) {
+			return nil, errBoom
+		},
+	}
+	cartRepo := &stubCartRepo{
+		getWithItemsFn: func(userID uint) (*models.Cart, error) { return testCartWithItems(), nil },
+	}
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) {
+			return &models.Product{ID: 3, MerchantID: 1, Stock: 10, Price: 1999}, nil
+		},
+	}
+	svc := newTestOrderService(nil, orderRepo, cartRepo, productRepo, &stubPaymentRepo{})
+
+	_, err := svc.ProcessCheckout(1, "1 Main St", "key-123")
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeFetchOrder)
+}
+
+func TestCheckoutConflictRecoveryPaymentFetchFails(t *testing.T) {
+	orderRepo := &stubOrderRepo{
+		createFn: func(o *models.Order) error { return repositories.ErrDuplicate },
+		getByIdemFn: func(userID uint, key string) (*models.Order, error) {
+			return &models.Order{ID: 7, UserID: 1}, nil
+		},
+	}
+	paymentRepo := &stubPaymentRepo{
+		getByOrderIDFn: func(orderID uint) (*models.Payment, error) { return nil, errBoom },
+	}
+	cartRepo := &stubCartRepo{
+		getWithItemsFn: func(userID uint) (*models.Cart, error) { return testCartWithItems(), nil },
+	}
+	productRepo := &stubProductRepo{
+		getByIDFn: func(id uint) (*models.Product, error) {
+			return &models.Product{ID: 3, MerchantID: 1, Stock: 10, Price: 1999}, nil
+		},
+	}
+	svc := newTestOrderService(nil, orderRepo, cartRepo, productRepo, paymentRepo)
+
+	_, err := svc.ProcessCheckout(1, "1 Main St", "key-123")
+	assertAppError(t, err, http.StatusInternalServerError, "fetch_payment_failed")
+}

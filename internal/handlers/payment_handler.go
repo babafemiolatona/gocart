@@ -4,16 +4,15 @@ import (
 	"net/http"
 
 	apperrors "gocart/internal/errors"
-	"gocart/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 type PaymentHandler struct {
-	paymentService *services.PaymentService
+	paymentService PaymentService
 }
 
-func NewPaymentHandler(paymentService *services.PaymentService) *PaymentHandler {
+func NewPaymentHandler(paymentService PaymentService) *PaymentHandler {
 	return &PaymentHandler{
 		paymentService: paymentService,
 	}

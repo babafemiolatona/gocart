@@ -345,3 +345,55 @@ func TestClearCart(t *testing.T) {
 		t.Errorf("expected to clear cart 5, got %d", cleared)
 	}
 }
+
+func TestRemoveFromCartRepoError(t *testing.T) {
+	cartRepo := &stubCartRepo{
+		getWithItemsFn: func(userID uint) (*models.Cart, error) {
+			return &models.Cart{ID: 5, Items: []models.CartItem{{ID: 9}}}, nil
+		},
+		removeItemFn: func(cartItemID uint) error { return errBoom },
+	}
+	svc := newTestCartService(cartRepo, &stubProductRepo{})
+
+	_, err := svc.RemoveFromCart(7, 9)
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeRemoveCartItem)
+}
+
+func TestRemoveFromCartItemNotInCart(t *testing.T) {
+	cartRepo := &stubCartRepo{
+		getWithItemsFn: func(userID uint) (*models.Cart, error) {
+			return &models.Cart{ID: 5, Items: []models.CartItem{{ID: 1}}}, nil
+		},
+	}
+	svc := newTestCartService(cartRepo, &stubProductRepo{})
+
+	_, err := svc.RemoveFromCart(7, 99)
+	assertAppError(t, err, http.StatusNotFound, apperrors.CodeCartItemNotFound)
+}
+
+func TestRemoveFromCartRepoNotFound(t *testing.T) {
+	cartRepo := &stubCartRepo{
+		getWithItemsFn: func(userID uint) (*models.Cart, error) {
+			return &models.Cart{ID: 5, Items: []models.CartItem{{ID: 9}}}, nil
+		},
+		removeItemFn: func(cartItemID uint) error { return repositories.ErrRecordNotFound },
+	}
+	svc := newTestCartService(cartRepo, &stubProductRepo{})
+
+	_, err := svc.RemoveFromCart(7, 9)
+	assertAppError(t, err, http.StatusNotFound, apperrors.CodeCartItemNotFound)
+}
+
+func TestClearCartRepoError(t *testing.T) {
+	cartRepo := &stubCartRepo{
+		getWithItemsFn: func(userID uint) (*models.Cart, error) {
+			return &models.Cart{ID: 5}, nil
+		},
+		clearCartFn: func(cartID uint) error { return errBoom },
+	}
+	svc := newTestCartService(cartRepo, &stubProductRepo{})
+
+	if err := svc.ClearCart(7); err != errBoom {
+		t.Errorf("expected errBoom, got %v", err)
+	}
+}

@@ -236,8 +236,8 @@ func (s *ProductService) GetProducts(query *dto.PaginationQuery, filters *query.
 }
 
 func (s *ProductService) UpdateProduct(
-	id uint,
 	merchantID uint,
+	id uint,
 	req *dto.UpdateProductRequest,
 	images []*multipart.FileHeader,
 ) (*dto.ProductResponse, error) {

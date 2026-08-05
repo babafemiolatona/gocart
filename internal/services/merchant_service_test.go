@@ -271,3 +271,70 @@ func TestGetDashboard(t *testing.T) {
 		t.Errorf("unexpected recent orders: %+v", resp.RecentOrders)
 	}
 }
+
+func TestGetDashboardRepoError(t *testing.T) {
+	productRepo := &stubProductRepo{
+		countByMerchantFn: func(merchantID uint) (int64, error) { return 0, errBoom },
+	}
+	svc := newTestMerchantService(nil, &stubMerchantRepo{}, &stubOrderRepo{}, productRepo)
+
+	_, err := svc.GetDashboard(1)
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeFetchDashboard)
+}
+
+func TestUpdateOrderStatusDeliveredFromShipped(t *testing.T) {
+	var updated models.OrderStatus
+	orderRepo := &stubOrderRepo{
+		getMerchantByIDFn: func(merchantID uint, orderID uint) (*models.Order, error) {
+			return &models.Order{ID: 1, Status: models.OrderStatusShipped}, nil
+		},
+		updateStatusFn: func(orderID uint, status models.OrderStatus) error {
+			updated = status
+			return nil
+		},
+	}
+	svc := newTestMerchantService(nil, &stubMerchantRepo{}, orderRepo, &stubProductRepo{})
+
+	err := svc.UpdateOrderStatus(1, 1, &dto.UpdateOrderStatusRequest{Status: models.OrderStatusDelivered})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated != models.OrderStatusDelivered {
+		t.Errorf("expected delivered, got %q", updated)
+	}
+}
+
+func TestUpdateOrderStatusDeliveredFromPending(t *testing.T) {
+	orderRepo := &stubOrderRepo{
+		getMerchantByIDFn: func(merchantID uint, orderID uint) (*models.Order, error) {
+			return &models.Order{ID: 1, Status: models.OrderStatusPending}, nil
+		},
+	}
+	svc := newTestMerchantService(nil, &stubMerchantRepo{}, orderRepo, &stubProductRepo{})
+
+	err := svc.UpdateOrderStatus(1, 1, &dto.UpdateOrderStatusRequest{Status: models.OrderStatusDelivered})
+	assertAppError(t, err, http.StatusBadRequest, apperrors.CodeInvalidOrderStatus)
+}
+
+func TestUpdateOrderStatusFetchFails(t *testing.T) {
+	orderRepo := &stubOrderRepo{
+		getMerchantByIDFn: func(merchantID uint, orderID uint) (*models.Order, error) {
+			return nil, errBoom
+		},
+	}
+	svc := newTestMerchantService(nil, &stubMerchantRepo{}, orderRepo, &stubProductRepo{})
+
+	err := svc.UpdateOrderStatus(1, 1, &dto.UpdateOrderStatusRequest{Status: models.OrderStatusShipped})
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeFetchOrder)
+}
+
+func TestGetDashboardLowStockError(t *testing.T) {
+	productRepo := &stubProductRepo{
+		countByMerchantFn: func(merchantID uint) (int64, error) { return 1, nil },
+		countLowStockFn:   func(merchantID uint, threshold int) (int64, error) { return 0, errBoom },
+	}
+	svc := newTestMerchantService(nil, &stubMerchantRepo{}, &stubOrderRepo{}, productRepo)
+
+	_, err := svc.GetDashboard(1)
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeFetchDashboard)
+}

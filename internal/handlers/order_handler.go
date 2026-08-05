@@ -4,7 +4,6 @@ import (
 	"gocart/internal/dto"
 	apperrors "gocart/internal/errors"
 	"gocart/internal/query"
-	"gocart/internal/services"
 	"net/http"
 	"strconv"
 
@@ -12,10 +11,10 @@ import (
 )
 
 type OrderHandler struct {
-	orderService *services.OrderService
+	orderService OrderService
 }
 
-func NewOrderHandler(orderService *services.OrderService) *OrderHandler {
+func NewOrderHandler(orderService OrderService) *OrderHandler {
 	return &OrderHandler{orderService: orderService}
 }
 
