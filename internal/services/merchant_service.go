@@ -17,14 +17,14 @@ const (
 )
 
 type MerchantService struct {
-	uow          *repositories.UnitOfWork
+	uow          repositories.TransactionManager
 	merchantRepo repositories.MerchantRepository
 	orderRepo    repositories.OrderRepository
 	productRepo  repositories.ProductRepository
 }
 
 func NewMerchantService(
-	uow *repositories.UnitOfWork,
+	uow repositories.TransactionManager,
 	merchantRepo repositories.MerchantRepository,
 	orderRepo repositories.OrderRepository,
 	productRepo repositories.ProductRepository,
@@ -44,9 +44,9 @@ func (s *MerchantService) RegisterMerchant(
 
 	var merchant models.Merchant
 
-	err := s.uow.WithTransaction(func(uow *repositories.UnitOfWork) error {
+	err := s.uow.WithTransaction(func(scope repositories.TransactionScope) error {
 
-		_, err := uow.Auth().GetByID(userID)
+		_, err := scope.Auth().GetByID(userID)
 		if err != nil {
 			if errors.Is(err, repositories.ErrRecordNotFound) {
 				return apperrors.New(
@@ -74,7 +74,7 @@ func (s *MerchantService) RegisterMerchant(
 			IsVerified:   false,
 		}
 
-		if err := uow.Merchant().Create(&merchant); err != nil {
+		if err := scope.Merchant().Create(&merchant); err != nil {
 
 			if errors.Is(err, repositories.ErrDuplicate) {
 				return apperrors.New(

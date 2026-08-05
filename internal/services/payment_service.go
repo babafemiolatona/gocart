@@ -14,7 +14,7 @@ import (
 )
 
 type PaymentService struct {
-	uow         *repositories.UnitOfWork
+	uow         repositories.TransactionManager
 	paymentRepo repositories.PaymentRepository
 	orderRepo   repositories.OrderRepository
 	cartRepo    repositories.CartRepository
@@ -22,7 +22,7 @@ type PaymentService struct {
 }
 
 func NewPaymentService(
-	uow *repositories.UnitOfWork,
+	uow repositories.TransactionManager,
 	paymentRepo repositories.PaymentRepository,
 	orderRepo repositories.OrderRepository,
 	cartRepo repositories.CartRepository,
@@ -80,9 +80,9 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 		)
 	}
 
-	err = s.uow.WithTransaction(func(uow *repositories.UnitOfWork) error {
+	err = s.uow.WithTransaction(func(scope repositories.TransactionScope) error {
 
-		claimed, err := uow.Payment().TransitionStatus(
+		claimed, err := scope.Payment().TransitionStatus(
 			reference,
 			models.PaymentStatusPending,
 			models.PaymentStatusSucceeded,
@@ -102,7 +102,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 
 		for _, item := range cart.Items {
 
-			if err := uow.Product().DecrementStock(item.ProductID, item.Quantity); err != nil {
+			if err := scope.Product().DecrementStock(item.ProductID, item.Quantity); err != nil {
 				if errors.Is(err, repositories.ErrRecordNotFound) {
 					return apperrors.New(
 						http.StatusNotFound,
@@ -130,7 +130,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 			}
 		}
 
-		if err := uow.Cart().ClearCart(cart.ID); err != nil {
+		if err := scope.Cart().ClearCart(cart.ID); err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
 				apperrors.CodeClearCart,
@@ -139,7 +139,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 			)
 		}
 
-		if err := uow.Order().UpdateOrderStatus(
+		if err := scope.Order().UpdateOrderStatus(
 			order.ID,
 			models.OrderStatusConfirmed,
 		); err != nil {

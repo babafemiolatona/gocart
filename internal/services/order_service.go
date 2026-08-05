@@ -11,7 +11,7 @@ import (
 )
 
 type OrderService struct {
-	uow         *repositories.UnitOfWork
+	uow         repositories.TransactionManager
 	orderRepo   repositories.OrderRepository
 	cartRepo    repositories.CartRepository
 	productRepo repositories.ProductRepository
@@ -21,7 +21,7 @@ type OrderService struct {
 var errCheckoutConflict = errors.New("checkout idempotency conflict")
 
 func NewOrderService(
-	uow *repositories.UnitOfWork,
+	uow repositories.TransactionManager,
 	orderRepo repositories.OrderRepository,
 	cartRepo repositories.CartRepository,
 	productRepo repositories.ProductRepository,
@@ -147,9 +147,9 @@ func (s *OrderService) ProcessCheckout(
 
 	var payment *models.Payment
 
-	err = s.uow.WithTransaction(func(uow *repositories.UnitOfWork) error {
+	err = s.uow.WithTransaction(func(scope repositories.TransactionScope) error {
 
-		if err := uow.Order().CreateOrder(order); err != nil {
+		if err := scope.Order().CreateOrder(order); err != nil {
 			if idempotencyKey != "" && errors.Is(err, repositories.ErrDuplicate) {
 				return errCheckoutConflict
 			}
@@ -171,7 +171,7 @@ func (s *OrderService) ProcessCheckout(
 			Provider:       models.PaymentProviderMock,
 		}
 
-		if err := uow.Payment().Create(payment); err != nil {
+		if err := scope.Payment().Create(payment); err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
 				apperrors.CodeCreatePayment,
@@ -333,9 +333,9 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 	}
 
 	if order.Status == models.OrderStatusConfirmed {
-		err := s.uow.WithTransaction(func(uow *repositories.UnitOfWork) error {
+		err := s.uow.WithTransaction(func(scope repositories.TransactionScope) error {
 
-			claimed, err := uow.Order().TransitionOrderStatus(
+			claimed, err := scope.Order().TransitionOrderStatus(
 				order.ID,
 				models.OrderStatusConfirmed,
 				models.OrderStatusCancelled,
@@ -355,7 +355,7 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 
 			for _, item := range order.Items {
 
-				if err := uow.Product().IncrementStock(item.ProductID, item.Quantity); err != nil {
+				if err := scope.Product().IncrementStock(item.ProductID, item.Quantity); err != nil {
 					if errors.Is(err, repositories.ErrRecordNotFound) {
 						return apperrors.New(
 							http.StatusNotFound,
