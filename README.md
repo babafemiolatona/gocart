@@ -1,13 +1,13 @@
 # Gocart
 
-Gocart is a backend **REST API** for an e-commerce platform built with **Go**, **Gin**, and **GORM**. It features **JWT authentication**, **role-based authorization**, **product** and **category management**, **shopping cart** and **checkout workflows**, and **MinIO integration** for product image storage.
+Gocart is a backend **REST API** for an e-commerce platform built with **Go**, **Gin**, and **GORM**. It features **JWT authentication**, **role-based authorization**, **product** and **category management**, **shopping cart** and **checkout workflows**, **order** and **payment** processing, a **merchant dashboard** for product and fulfillment management, and **MinIO integration** for product image storage.
 
 ## Key Features
 
 ### Authentication and Users
 
 - Register a new **customer**.
-- Log in with **email** and **password**.
+- Log in with **email or username** and **password**.
 - Receive a signed **JWT access token**.
 - Access the authenticated **profile endpoint**.
 - Default role assignment is **customer**.
@@ -18,7 +18,7 @@ Gocart is a backend **REST API** for an e-commerce platform built with **Go**, *
 - Filter products by **category**, **price range**, **stock status**, and **search term**.
 - Sort products by **id**, **name**, **price**, **created_at**, or **stock**.
 - Browse **categories** publicly.
-- **Admins** can create, update, and delete categories and products.
+- **Admins** can create, update, and delete categories.
 
 ### Cart and Checkout
 
@@ -26,13 +26,21 @@ Gocart is a backend **REST API** for an e-commerce platform built with **Go**, *
 - **Add**, **update**, **remove**, and **clear** cart items.
 - Enforce **stock checks** while modifying the cart.
 - **Checkout** converts the cart into an order and creates a pending payment; stock is deducted when the payment is processed.
+- **Checkout** accepts an optional `idempotency_key` to prevent duplicate orders.
 - **Cart totals** and **item counts** are recalculated after cart mutations.
 
 ### Orders
 
 - List the current user’s **orders**.
 - Fetch **order details** by id.
-- **Cancel** an order.
+- **Cancel** an order; pending-payment orders cancel directly, confirmed orders also restore product stock.
+
+### Merchants
+
+- Register a **merchant profile** from an authenticated customer account.
+- Manage **products** (create, update, delete) scoped to the merchant.
+- Fulfill **orders** by advancing them to **shipped** and **delivered**.
+- View a **dashboard** with product, order, and revenue statistics.
 
 ### Image Uploads
 
@@ -48,7 +56,7 @@ Gocart is a backend **REST API** for an e-commerce platform built with **Go**, *
 - **JWT** for authentication
 - **bcrypt** for password hashing
 - **MinIO** for image storage
-- **Zerolog** for time formatting configuration
+- **Zerolog** for structured logging
 - **Docker** and **Docker Compose**
 
 ## Architecture
@@ -97,7 +105,6 @@ The application loads environment variables from a local `.env` file unless `GO_
 | `DB_SSL_MODE` | Yes | Passed into the PostgreSQL DSN. |
 | `JWT_SECRET` | Yes | Signing key for JWT tokens. |
 | `JWT_EXPIRY` | Yes | Duration string such as `24h` or `168h`. |
-| `ALLOWED_ORIGINS` | Yes | Comma-separated list used for configuration loading. |
 | `MINIO_ENDPOINT` | Yes | MinIO endpoint, for example `localhost:9000`. |
 | `MINIO_ACCESS_KEY` | Yes | MinIO access key. |
 | `MINIO_SECRET_KEY` | Yes | MinIO secret key. |
@@ -106,8 +113,8 @@ The application loads environment variables from a local `.env` file unless `GO_
 | `UPLOAD_DIR` | No | Defaults to `./uploads`. |
 | `MAX_UPLOAD_SIZE` | Yes | Parsed as an integer. |
 | `TOKEN_DURATION_MINUTES` | No | Defaults to `60`. |
-| `TRUSTED_PROXY_IPS` | No | Comma-separated proxy IP list. |
-| `REDIS_URL` | Loaded | Present in config, but not currently wired into runtime logic. |
+| `SEED_ADMIN_EMAIL` | No | If set, seeds an admin user on startup. |
+| `SEED_ADMIN_PASSWORD` | No | If set, seeds an admin user on startup. |
 
 ### Example `.env`
 
@@ -124,7 +131,6 @@ DB_SSL_MODE=disable
 
 JWT_SECRET=change-me-in-production
 JWT_EXPIRY=24h
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
 MINIO_ENDPOINT=localhost:9000
 MINIO_ACCESS_KEY=minioadmin
@@ -134,8 +140,10 @@ MINIO_USE_SSL=false
 
 MAX_UPLOAD_SIZE=10485760
 TOKEN_DURATION_MINUTES=60
-TRUSTED_PROXY_IPS=
-REDIS_URL=
+
+# Optional; if unset, no admin is seeded
+SEED_ADMIN_EMAIL=admin@gocart.com
+SEED_ADMIN_PASSWORD=change-me
 ```
 
 ## Local Development
@@ -189,15 +197,16 @@ The compose file currently starts:
 - `postgres` on port `5432`
 - `minio` on ports `9000` and `9001`
 
-## Default Admin Account
+## Admin Seeding
 
-On startup, the app seeds an admin user if one does not already exist:
+On startup, the app seeds an admin user if `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` are set and the account does not already exist. If either is unset, seeding is skipped entirely.
+
+Example:
 
 - Email: `admin@gocart.com`
-- Username: `admin`
-- Password: `admin123`
+- Password: `change-me`
 
-This is useful for local development and should be changed before any production use.
+Change the password before any production use.
 
 ## API Overview
 
@@ -378,6 +387,55 @@ curl -X POST http://localhost:8080/api/v1/orders/checkout \
   -H 'Authorization: Bearer YOUR_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{
-    "shipping_address": "123 Broad Street, Lagos"
+    "shipping_address": "123 Broad Street, Lagos",
+    "idempotency_key": "optional-unique-key"
   }'
+```
+
+## API Documentation (Swagger)
+
+When the server is running, interactive API documentation is available at:
+
+```
+http://localhost:8080/swagger/index.html
+```
+
+The docs are generated from annotations in `cmd/api/main.go`. Regenerate them with:
+
+```bash
+make docs
+```
+
+## Development Commands
+
+A `Makefile` provides common tasks:
+
+| Command | Description |
+| --- | --- |
+| `make run` | Run the API locally with `go run ./cmd/api`. |
+| `make build` | Build a binary to `bin/api`. |
+| `make test` | Run all Go tests. |
+| `make lint` | Run `go vet ./...`. |
+| `make docs` | Regenerate the Swagger documentation into `docs/`. |
+
+## Project Structure
+
+```
+cmd/api/             Application entrypoint (config loading, DB setup, router wiring)
+docs/                Generated Swagger documentation
+internal/
+  config/            Environment configuration loading
+  dto/               Request/response data transfer objects
+  errors/            Centralized error codes and AppError type
+  handlers/          HTTP handlers (parse requests, write responses)
+  logger/            Structured logging (zerolog)
+  mapper/            Model <-> DTO conversions
+  middleware/        Auth and role-based access control
+  models/            GORM models
+  query/             Product filter query parameters
+  repositories/      Database persistence and the UnitOfWork transaction wrapper
+  routes/            Route registration
+  seed/              Admin user seeding
+  services/          Business logic
+  storage/           MinIO image storage
 ```
