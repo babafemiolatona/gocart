@@ -8,6 +8,14 @@ package main
 // @name Authorization
 
 import (
+	"context"
+	"errors"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	_ "gocart/docs"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -36,7 +44,6 @@ func main() {
 
 	logger.Log.Info().
 		Str("endpoint", config.CFG.MinioEndpoint).
-		Str("access_key", config.CFG.MinioAccessKey).
 		Str("bucket", config.CFG.MinioBucket).
 		Bool("use_ssl", config.CFG.MinioUseSSL).
 		Msg("minio configuration")
@@ -73,6 +80,7 @@ func main() {
 
 	// Create router
 	router := gin.Default()
+	router.SetTrustedProxies(nil)
 
 	// Swagger endpoint
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -80,9 +88,31 @@ func main() {
 	// Setup routes
 	routes.SetupRoutes(router, db, AuthService, minioStorage)
 
-	// Start server
-	logger.Log.Info().Str("port", config.CFG.ServerPort).Msg("starting server")
-	if err := router.Run(config.CFG.ServerPort); err != nil {
-		logger.Log.Fatal().Err(err).Msg("failed to start server")
+	srv := &http.Server{
+		Addr:    config.CFG.ServerPort,
+		Handler: router,
 	}
+
+	go func() {
+		logger.Log.Info().Str("port", config.CFG.ServerPort).Msg("starting server")
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Log.Fatal().Err(err).Msg("failed to start server")
+		}
+	}()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	<-ctx.Done()
+
+	logger.Log.Info().Msg("shutting down server")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Fatal().Err(err).Msg("server forced to shutdown")
+	}
+
+	logger.Log.Info().Msg("server exited gracefully")
 }
