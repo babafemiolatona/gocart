@@ -35,7 +35,7 @@ func NewOrderService(
 	}
 }
 
-func (s *OrderService) ValidateCart(cart *models.Cart) error {
+func (s *OrderService) validateCart(cart *models.Cart) error {
 	for _, item := range cart.Items {
 		product, err := s.productRepo.GetByID(item.ProductID)
 		if err != nil {
@@ -113,7 +113,7 @@ func (s *OrderService) ProcessCheckout(
 		)
 	}
 
-	if err := s.ValidateCart(cart); err != nil {
+	if err := s.validateCart(cart); err != nil {
 		return nil, err
 	}
 
@@ -334,6 +334,25 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 	if order.Status == models.OrderStatusConfirmed {
 		err := s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
 
+			claimed, err := s.orderRepo.TransitionOrderStatusTx(
+				tx,
+				order.ID,
+				models.OrderStatusConfirmed,
+				models.OrderStatusCancelled,
+			)
+			if err != nil {
+				return apperrors.New(
+					http.StatusInternalServerError,
+					apperrors.CodeCancelOrder,
+					"failed to cancel order",
+					err,
+				)
+			}
+
+			if !claimed {
+				return nil
+			}
+
 			for _, item := range order.Items {
 
 				if err := s.productRepo.IncrementStockTx(tx, item.ProductID, item.Quantity); err != nil {
@@ -348,24 +367,11 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 
 					return apperrors.New(
 						http.StatusInternalServerError,
-						"update_product_failed",
+						apperrors.CodeUpdateProduct,
 						"failed to update product",
 						err,
 					)
 				}
-			}
-
-			if err := s.orderRepo.UpdateOrderStatusTx(
-				tx,
-				order.ID,
-				models.OrderStatusCancelled,
-			); err != nil {
-				return apperrors.New(
-					http.StatusInternalServerError,
-					apperrors.CodeCancelOrder,
-					"failed to cancel order",
-					err,
-				)
 			}
 
 			return nil

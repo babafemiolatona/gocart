@@ -1585,7 +1585,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dto.OrderResponse"
+                            "$ref": "#/definitions/dto.CheckoutResponse"
                         }
                     },
                     "400": {
@@ -2161,8 +2161,22 @@ const docTemplate = `{
                 "shipping_address"
             ],
             "properties": {
+                "idempotency_key": {
+                    "type": "string"
+                },
                 "shipping_address": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.CheckoutResponse": {
+            "type": "object",
+            "properties": {
+                "order": {
+                    "$ref": "#/definitions/dto.OrderCheckoutResponse"
+                },
+                "payment": {
+                    "$ref": "#/definitions/dto.PaymentResponse"
                 }
             }
         },
@@ -2184,13 +2198,13 @@ const docTemplate = `{
         "dto.MerchantDashboardResponse": {
             "type": "object",
             "properties": {
+                "awaiting_shipment": {
+                    "type": "integer"
+                },
                 "completed_orders": {
                     "type": "integer"
                 },
                 "low_stock_products": {
-                    "type": "integer"
-                },
-                "pending_orders": {
                     "type": "integer"
                 },
                 "recent_orders": {
@@ -2328,6 +2342,46 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.OrderCheckoutResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.OrderItemResponse"
+                    }
+                },
+                "shipping_address": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.OrderItemResponse": {
+            "type": "object",
+            "properties": {
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
                 }
             }
         },

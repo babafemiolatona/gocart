@@ -14,6 +14,7 @@ type OrderRepository interface {
 	GetOrdersByUserID(userID uint, p *dto.PaginationQuery) ([]models.Order, int64, error)
 	UpdateOrderStatus(orderID uint, status models.OrderStatus) error
 	UpdateOrderStatusTx(tx *gorm.DB, orderID uint, status models.OrderStatus) error
+	TransitionOrderStatusTx(tx *gorm.DB, orderID uint, from, to models.OrderStatus) (bool, error)
 	WithTransaction(fn func(tx *gorm.DB) error) error
 	GetOrdersByMerchantID(merchantID uint, p *dto.PaginationQuery) ([]models.Order, int64, error)
 	GetMerchantOrderByID(merchantID uint, orderID uint) (*models.Order, error)
@@ -131,6 +132,23 @@ func (r *orderRepository) UpdateOrderStatusTx(tx *gorm.DB, orderID uint, status 
 	}
 
 	return nil
+}
+
+func (r *orderRepository) TransitionOrderStatusTx(
+	tx *gorm.DB,
+	orderID uint,
+	from, to models.OrderStatus,
+) (bool, error) {
+	result := tx.
+		Model(&models.Order{}).
+		Where("id = ? AND status = ?", orderID, from).
+		Update("status", to)
+
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	return result.RowsAffected > 0, nil
 }
 
 func (r *orderRepository) WithTransaction(fn func(tx *gorm.DB) error) error {

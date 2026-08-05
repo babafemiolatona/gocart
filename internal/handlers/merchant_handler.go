@@ -81,13 +81,13 @@ func (h *MerchantHandler) RegisterMerchant(c *gin.Context) {
 //	@Router			/api/v1/merchants/me [get]
 func (h *MerchantHandler) GetMe(c *gin.Context) {
 
-	userID, err := getUserID(c)
+	merchantID, err := getMerchantID(c)
 	if err != nil {
 		c.Error(err)
 		return
 	}
 
-	merchant, err := h.merchantService.GetProfile(userID)
+	merchant, err := h.merchantService.GetProfile(merchantID)
 	if err != nil {
 		c.Error(err)
 		return
@@ -121,14 +121,14 @@ func (h *MerchantHandler) UpdateMe(c *gin.Context) {
 		return
 	}
 
-	userID, err := getUserID(c)
+	merchantID, err := getMerchantID(c)
 	if err != nil {
 		c.Error(err)
 		return
 	}
 
 	merchant, err := h.merchantService.UpdateProfile(
-		userID,
+		merchantID,
 		&req,
 	)
 	if err != nil {
@@ -153,13 +153,13 @@ func (h *MerchantHandler) UpdateMe(c *gin.Context) {
 //	@Failure		500	{object}	errors.ErrorResponse
 //	@Router			/api/v1/merchants/orders [get]
 func (h *MerchantHandler) GetOrders(c *gin.Context) {
-	userID, err := getUserID(c)
+	merchantID, err := getMerchantID(c)
 	if err != nil {
 		c.Error(err)
 		return
 	}
 
-	orders, err := h.merchantService.GetOrders(userID, query.ParsePagination(c))
+	orders, err := h.merchantService.GetOrders(merchantID, query.ParsePagination(c))
 	if err != nil {
 		c.Error(err)
 		return
@@ -184,7 +184,7 @@ func (h *MerchantHandler) GetOrders(c *gin.Context) {
 //	@Failure		500	{object}	errors.ErrorResponse
 //	@Router			/api/v1/merchants/orders/{id} [get]
 func (h *MerchantHandler) GetOrder(c *gin.Context) {
-	userID, err := getUserID(c)
+	merchantID, err := getMerchantID(c)
 	if err != nil {
 		c.Error(err)
 		return
@@ -202,7 +202,7 @@ func (h *MerchantHandler) GetOrder(c *gin.Context) {
 	}
 
 	order, err := h.merchantService.GetOrder(
-		userID,
+		merchantID,
 		uint(orderID),
 	)
 	if err != nil {
@@ -231,7 +231,7 @@ func (h *MerchantHandler) GetOrder(c *gin.Context) {
 //	@Failure		500		{object}	errors.ErrorResponse
 //	@Router			/api/v1/merchants/orders/{id}/status [patch]
 func (h *MerchantHandler) UpdateOrderStatus(c *gin.Context) {
-	userID, err := getUserID(c)
+	merchantID, err := getMerchantID(c)
 	if err != nil {
 		c.Error(err)
 		return
@@ -256,7 +256,7 @@ func (h *MerchantHandler) UpdateOrderStatus(c *gin.Context) {
 	}
 
 	err = h.merchantService.UpdateOrderStatus(
-		userID,
+		merchantID,
 		uint(orderID),
 		&req,
 	)
@@ -284,13 +284,13 @@ func (h *MerchantHandler) UpdateOrderStatus(c *gin.Context) {
 //	@Failure		500	{object}	errors.ErrorResponse
 //	@Router			/api/v1/merchants/dashboard [get]
 func (h *MerchantHandler) GetDashboard(c *gin.Context) {
-	userID, err := getUserID(c)
+	merchantID, err := getMerchantID(c)
 	if err != nil {
 		c.Error(err)
 		return
 	}
 
-	dashboard, err := h.merchantService.GetDashboard(userID)
+	dashboard, err := h.merchantService.GetDashboard(merchantID)
 	if err != nil {
 		c.Error(err)
 		return

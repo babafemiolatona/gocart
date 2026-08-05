@@ -33,7 +33,7 @@ type MerchantResponse struct {
 type MerchantDashboardResponse struct {
 	TotalProducts    int64                         `json:"total_products"`
 	TotalOrders      int64                         `json:"total_orders"`
-	PendingOrders    int64                         `json:"pending_orders"`
+	AwaitingShipment int64                         `json:"awaiting_shipment"`
 	CompletedOrders  int64                         `json:"completed_orders"`
 	TotalRevenue     float64                       `json:"total_revenue"`
 	LowStockProducts int64                         `json:"low_stock_products"`

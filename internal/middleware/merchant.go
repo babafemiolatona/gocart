@@ -66,7 +66,6 @@ func RequireMerchant(
 		}
 
 		c.Set("merchantID", merchant.ID)
-		c.Set("merchant", merchant)
 
 		c.Next()
 	}

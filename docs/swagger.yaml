@@ -83,10 +83,19 @@ definitions:
     type: object
   dto.CheckoutRequest:
     properties:
+      idempotency_key:
+        type: string
       shipping_address:
         type: string
     required:
     - shipping_address
+    type: object
+  dto.CheckoutResponse:
+    properties:
+      order:
+        $ref: '#/definitions/dto.OrderCheckoutResponse'
+      payment:
+        $ref: '#/definitions/dto.PaymentResponse'
     type: object
   dto.LoginRequest:
     properties:
@@ -100,11 +109,11 @@ definitions:
     type: object
   dto.MerchantDashboardResponse:
     properties:
+      awaiting_shipment:
+        type: integer
       completed_orders:
         type: integer
       low_stock_products:
-        type: integer
-      pending_orders:
         type: integer
       recent_orders:
         items:
@@ -195,6 +204,32 @@ definitions:
         type: string
       updated_at:
         type: string
+    type: object
+  dto.OrderCheckoutResponse:
+    properties:
+      id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/dto.OrderItemResponse'
+        type: array
+      shipping_address:
+        type: string
+      status:
+        type: string
+      total:
+        type: number
+    type: object
+  dto.OrderItemResponse:
+    properties:
+      price:
+        type: number
+      product_id:
+        type: integer
+      product_name:
+        type: string
+      quantity:
+        type: integer
     type: object
   dto.OrderResponse:
     properties:
@@ -1489,7 +1524,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.OrderResponse'
+            $ref: '#/definitions/dto.CheckoutResponse'
         "400":
           description: Bad Request
           schema:

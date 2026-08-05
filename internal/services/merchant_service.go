@@ -39,19 +39,6 @@ func NewMerchantService(
 	}
 }
 
-func (s *MerchantService) getMerchant(userID uint) (*models.Merchant, error) {
-	merchant, err := s.merchantRepo.GetByUserID(userID)
-	if err != nil {
-		return nil, repoErr(
-			err,
-			apperrors.CodeFetchMerchant, "failed to fetch merchant profile",
-			apperrors.CodeMerchantNotFound, "merchant profile not found",
-		)
-	}
-
-	return merchant, nil
-}
-
 func (s *MerchantService) RegisterMerchant(
 	userID uint,
 	req *dto.MerchantRegisterRequest,
@@ -118,8 +105,8 @@ func (s *MerchantService) RegisterMerchant(
 	return mapper.ToMerchantResponse(&merchant), nil
 }
 
-func (s *MerchantService) GetProfile(userID uint) (*dto.MerchantResponse, error) {
-	merchant, err := s.merchantRepo.GetByUserID(userID)
+func (s *MerchantService) GetProfile(merchantID uint) (*dto.MerchantResponse, error) {
+	merchant, err := s.merchantRepo.GetByID(merchantID)
 	if err != nil {
 		return nil, repoErr(
 			err,
@@ -132,11 +119,11 @@ func (s *MerchantService) GetProfile(userID uint) (*dto.MerchantResponse, error)
 }
 
 func (s *MerchantService) UpdateProfile(
-	userID uint,
+	merchantID uint,
 	req *dto.UpdateMerchantRequest,
 ) (*dto.MerchantResponse, error) {
 
-	merchant, err := s.merchantRepo.GetByUserID(userID)
+	merchant, err := s.merchantRepo.GetByID(merchantID)
 	if err != nil {
 		return nil, repoErr(
 			err,
@@ -174,16 +161,11 @@ func (s *MerchantService) UpdateProfile(
 }
 
 func (s *MerchantService) GetOrders(
-	userID uint,
+	merchantID uint,
 	p *dto.PaginationQuery,
 ) (*dto.PaginatedResponse, error) {
 
-	merchant, err := s.getMerchant(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	orders, total, err := s.orderRepo.GetOrdersByMerchantID(merchant.ID, p)
+	orders, total, err := s.orderRepo.GetOrdersByMerchantID(merchantID, p)
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
@@ -208,16 +190,11 @@ func (s *MerchantService) GetOrders(
 }
 
 func (s *MerchantService) GetOrder(
-	userID uint,
+	merchantID uint,
 	orderID uint,
 ) (*dto.MerchantOrderResponse, error) {
 
-	merchant, err := s.getMerchant(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	order, err := s.orderRepo.GetMerchantOrderByID(merchant.ID, orderID)
+	order, err := s.orderRepo.GetMerchantOrderByID(merchantID, orderID)
 	if err != nil {
 		return nil, repoErr(
 			err,
@@ -230,18 +207,13 @@ func (s *MerchantService) GetOrder(
 }
 
 func (s *MerchantService) UpdateOrderStatus(
-	userID uint,
+	merchantID uint,
 	orderID uint,
 	req *dto.UpdateOrderStatusRequest,
 ) error {
 
-	merchant, err := s.getMerchant(userID)
-	if err != nil {
-		return err
-	}
-
 	order, err := s.orderRepo.GetMerchantOrderByID(
-		merchant.ID,
+		merchantID,
 		orderID,
 	)
 	if err != nil {
@@ -290,15 +262,10 @@ func (s *MerchantService) UpdateOrderStatus(
 }
 
 func (s *MerchantService) GetDashboard(
-	userID uint,
+	merchantID uint,
 ) (*dto.MerchantDashboardResponse, error) {
 
-	merchant, err := s.getMerchant(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	totalProducts, err := s.productRepo.CountByMerchant(merchant.ID)
+	totalProducts, err := s.productRepo.CountByMerchant(merchantID)
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
@@ -309,7 +276,7 @@ func (s *MerchantService) GetDashboard(
 	}
 
 	lowStockProducts, err := s.productRepo.CountLowStockByMerchant(
-		merchant.ID,
+		merchantID,
 		lowStockThreshold,
 	)
 	if err != nil {
@@ -321,7 +288,7 @@ func (s *MerchantService) GetDashboard(
 		)
 	}
 
-	totalOrders, err := s.orderRepo.CountByMerchant(merchant.ID)
+	totalOrders, err := s.orderRepo.CountByMerchant(merchantID)
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
@@ -331,8 +298,8 @@ func (s *MerchantService) GetDashboard(
 		)
 	}
 
-	pendingOrders, err := s.orderRepo.CountByMerchantAndStatus(
-		merchant.ID,
+	awaitingShipment, err := s.orderRepo.CountByMerchantAndStatus(
+		merchantID,
 		models.OrderStatusConfirmed,
 	)
 	if err != nil {
@@ -345,7 +312,7 @@ func (s *MerchantService) GetDashboard(
 	}
 
 	completedOrders, err := s.orderRepo.CountByMerchantAndStatus(
-		merchant.ID,
+		merchantID,
 		models.OrderStatusDelivered,
 	)
 	if err != nil {
@@ -357,7 +324,7 @@ func (s *MerchantService) GetDashboard(
 		)
 	}
 
-	totalRevenue, err := s.orderRepo.SumRevenueByMerchant(merchant.ID)
+	totalRevenue, err := s.orderRepo.SumRevenueByMerchant(merchantID)
 	if err != nil {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
@@ -368,7 +335,7 @@ func (s *MerchantService) GetDashboard(
 	}
 
 	recentOrders, err := s.orderRepo.GetRecentOrdersByMerchant(
-		merchant.ID,
+		merchantID,
 		recentOrdersLimit,
 	)
 	if err != nil {
@@ -383,7 +350,7 @@ func (s *MerchantService) GetDashboard(
 	return &dto.MerchantDashboardResponse{
 		TotalProducts:    totalProducts,
 		TotalOrders:      totalOrders,
-		PendingOrders:    pendingOrders,
+		AwaitingShipment: awaitingShipment,
 		CompletedOrders:  completedOrders,
 		TotalRevenue:     mapper.MinorUnitsToUnit(totalRevenue),
 		LowStockProducts: lowStockProducts,

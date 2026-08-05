@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func AuthMiddleware(AuthService *services.AuthService) gin.HandlerFunc {
+func AuthMiddleware(authService *services.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -44,7 +44,7 @@ func AuthMiddleware(AuthService *services.AuthService) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := AuthService.VerifyToken(tokenString)
+		claims, err := authService.VerifyToken(tokenString)
 		if err != nil {
 			c.Error(apperrors.New(
 				http.StatusUnauthorized,

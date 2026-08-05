@@ -9,6 +9,7 @@ import (
 type MerchantRepository interface {
 	Create(merchant *models.Merchant) error
 	CreateTx(tx *gorm.DB, merchant *models.Merchant) error
+	GetByID(id uint) (*models.Merchant, error)
 	GetByUserID(userID uint) (*models.Merchant, error)
 	Update(merchant *models.Merchant) error
 	WithTransaction(fn func(tx *gorm.DB) error) error
@@ -30,6 +31,16 @@ func (r *merchantRepository) Create(merchant *models.Merchant) error {
 
 func (r *merchantRepository) CreateTx(tx *gorm.DB, merchant *models.Merchant) error {
 	return tx.Create(merchant).Error
+}
+
+func (r *merchantRepository) GetByID(id uint) (*models.Merchant, error) {
+	var merchant models.Merchant
+
+	if err := r.db.First(&merchant, id).Error; err != nil {
+		return nil, err
+	}
+
+	return &merchant, nil
 }
 
 func (r *merchantRepository) GetByUserID(userID uint) (*models.Merchant, error) {
