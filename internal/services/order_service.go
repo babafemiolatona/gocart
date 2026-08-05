@@ -8,11 +8,10 @@ import (
 	"gocart/internal/models"
 	"gocart/internal/repositories"
 	"net/http"
-
-	"gorm.io/gorm"
 )
 
 type OrderService struct {
+	uow         *repositories.UnitOfWork
 	orderRepo   repositories.OrderRepository
 	cartRepo    repositories.CartRepository
 	productRepo repositories.ProductRepository
@@ -22,12 +21,14 @@ type OrderService struct {
 var errCheckoutConflict = errors.New("checkout idempotency conflict")
 
 func NewOrderService(
+	uow *repositories.UnitOfWork,
 	orderRepo repositories.OrderRepository,
 	cartRepo repositories.CartRepository,
 	productRepo repositories.ProductRepository,
 	paymentRepo repositories.PaymentRepository,
 ) *OrderService {
 	return &OrderService{
+		uow:         uow,
 		orderRepo:   orderRepo,
 		cartRepo:    cartRepo,
 		productRepo: productRepo,
@@ -39,7 +40,7 @@ func (s *OrderService) validateCart(cart *models.Cart) error {
 	for _, item := range cart.Items {
 		product, err := s.productRepo.GetByID(item.ProductID)
 		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
+			if errors.Is(err, repositories.ErrRecordNotFound) {
 				return apperrors.New(
 					http.StatusNotFound,
 					apperrors.CodeProductNotFound,
@@ -84,7 +85,7 @@ func (s *OrderService) ProcessCheckout(
 					Payment: mapper.ToPaymentResponse(payment),
 				}, nil
 			}
-		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		} else if !errors.Is(err, repositories.ErrRecordNotFound) {
 			return nil, apperrors.New(
 				http.StatusInternalServerError,
 				apperrors.CodeFetchOrder,
@@ -146,10 +147,10 @@ func (s *OrderService) ProcessCheckout(
 
 	var payment *models.Payment
 
-	err = s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
+	err = s.uow.WithTransaction(func(uow *repositories.UnitOfWork) error {
 
-		if err := s.orderRepo.CreateOrderTx(tx, order); err != nil {
-			if idempotencyKey != "" && errors.Is(err, gorm.ErrDuplicatedKey) {
+		if err := uow.Order().CreateOrder(order); err != nil {
+			if idempotencyKey != "" && errors.Is(err, repositories.ErrDuplicate) {
 				return errCheckoutConflict
 			}
 
@@ -170,7 +171,7 @@ func (s *OrderService) ProcessCheckout(
 			Provider:       models.PaymentProviderMock,
 		}
 
-		if err := s.paymentRepo.CreateTx(tx, payment); err != nil {
+		if err := uow.Payment().Create(payment); err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
 				apperrors.CodeCreatePayment,
@@ -332,10 +333,9 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 	}
 
 	if order.Status == models.OrderStatusConfirmed {
-		err := s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
+		err := s.uow.WithTransaction(func(uow *repositories.UnitOfWork) error {
 
-			claimed, err := s.orderRepo.TransitionOrderStatusTx(
-				tx,
+			claimed, err := uow.Order().TransitionOrderStatus(
 				order.ID,
 				models.OrderStatusConfirmed,
 				models.OrderStatusCancelled,
@@ -355,8 +355,8 @@ func (s *OrderService) CancelOrder(userID, orderID uint) error {
 
 			for _, item := range order.Items {
 
-				if err := s.productRepo.IncrementStockTx(tx, item.ProductID, item.Quantity); err != nil {
-					if errors.Is(err, gorm.ErrRecordNotFound) {
+				if err := uow.Product().IncrementStock(item.ProductID, item.Quantity); err != nil {
+					if errors.Is(err, repositories.ErrRecordNotFound) {
 						return apperrors.New(
 							http.StatusNotFound,
 							apperrors.CodeProductNotFound,

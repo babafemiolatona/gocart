@@ -46,10 +46,10 @@ func LoadConfig() (*Config, error) {
 	loadEnv()
 
 	cfg := &Config{
-		UploadDir:        optionalEnv("UPLOAD_DIR", "./uploads"),
+		UploadDir:         optionalEnv("UPLOAD_DIR", "./uploads"),
 		SeedAdminEmail:    optionalEnv("SEED_ADMIN_EMAIL", ""),
 		SeedAdminPassword: optionalEnv("SEED_ADMIN_PASSWORD", ""),
-		MinioUseSSL:      optionalEnv("MINIO_USE_SSL", "false") == "true",
+		MinioUseSSL:       optionalEnv("MINIO_USE_SSL", "false") == "true",
 	}
 
 	for _, r := range []struct {

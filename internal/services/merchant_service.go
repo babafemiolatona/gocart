@@ -9,31 +9,29 @@ import (
 	"gocart/internal/mapper"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
-
-	"gorm.io/gorm"
 )
 
 const (
-	lowStockThreshold    = 5
-	recentOrdersLimit    = 5
+	lowStockThreshold = 5
+	recentOrdersLimit = 5
 )
 
 type MerchantService struct {
+	uow          *repositories.UnitOfWork
 	merchantRepo repositories.MerchantRepository
-	userRepo     repositories.AuthRepository
 	orderRepo    repositories.OrderRepository
 	productRepo  repositories.ProductRepository
 }
 
 func NewMerchantService(
+	uow *repositories.UnitOfWork,
 	merchantRepo repositories.MerchantRepository,
-	authRepo repositories.AuthRepository,
 	orderRepo repositories.OrderRepository,
 	productRepo repositories.ProductRepository,
 ) *MerchantService {
 	return &MerchantService{
+		uow:          uow,
 		merchantRepo: merchantRepo,
-		userRepo:     authRepo,
 		orderRepo:    orderRepo,
 		productRepo:  productRepo,
 	}
@@ -46,11 +44,11 @@ func (s *MerchantService) RegisterMerchant(
 
 	var merchant models.Merchant
 
-	err := s.merchantRepo.WithTransaction(func(tx *gorm.DB) error {
+	err := s.uow.WithTransaction(func(uow *repositories.UnitOfWork) error {
 
-		_, err := s.userRepo.GetByIDTx(tx, userID)
+		_, err := uow.Auth().GetByID(userID)
 		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
+			if errors.Is(err, repositories.ErrRecordNotFound) {
 				return apperrors.New(
 					http.StatusNotFound,
 					apperrors.CodeUserNotFound,
@@ -76,9 +74,9 @@ func (s *MerchantService) RegisterMerchant(
 			IsVerified:   false,
 		}
 
-		if err := s.merchantRepo.CreateTx(tx, &merchant); err != nil {
+		if err := uow.Merchant().Create(&merchant); err != nil {
 
-			if errors.Is(err, gorm.ErrDuplicatedKey) {
+			if errors.Is(err, repositories.ErrDuplicate) {
 				return apperrors.New(
 					http.StatusConflict,
 					apperrors.CodeMerchantExists,

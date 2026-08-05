@@ -8,11 +8,9 @@ import (
 
 type MerchantRepository interface {
 	Create(merchant *models.Merchant) error
-	CreateTx(tx *gorm.DB, merchant *models.Merchant) error
 	GetByID(id uint) (*models.Merchant, error)
 	GetByUserID(userID uint) (*models.Merchant, error)
 	Update(merchant *models.Merchant) error
-	WithTransaction(fn func(tx *gorm.DB) error) error
 }
 
 type merchantRepository struct {
@@ -27,10 +25,6 @@ func NewMerchantRepository(db *gorm.DB) MerchantRepository {
 
 func (r *merchantRepository) Create(merchant *models.Merchant) error {
 	return r.db.Create(merchant).Error
-}
-
-func (r *merchantRepository) CreateTx(tx *gorm.DB, merchant *models.Merchant) error {
-	return tx.Create(merchant).Error
 }
 
 func (r *merchantRepository) GetByID(id uint) (*models.Merchant, error) {
@@ -57,10 +51,4 @@ func (r *merchantRepository) GetByUserID(userID uint) (*models.Merchant, error) 
 
 func (r *merchantRepository) Update(merchant *models.Merchant) error {
 	return r.db.Save(merchant).Error
-}
-
-func (r *merchantRepository) WithTransaction(fn func(tx *gorm.DB) error) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		return fn(tx)
-	})
 }

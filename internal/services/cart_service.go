@@ -8,8 +8,6 @@ import (
 	"gocart/internal/models"
 	"gocart/internal/repositories"
 	"net/http"
-
-	"gorm.io/gorm"
 )
 
 type CartService struct {
@@ -27,7 +25,7 @@ func (s *CartService) GetCart(userID uint) (*models.Cart, error) {
 		return cart, nil
 	}
 
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if !errors.Is(err, repositories.ErrRecordNotFound) {
 		return nil, apperrors.New(
 			http.StatusInternalServerError,
 			apperrors.CodeFetchCart,
@@ -299,7 +297,7 @@ func (s *CartService) RemoveFromCart(userID, itemID uint) (*dto.CartResponse, er
 	}
 
 	if err := s.cartRepo.RemoveItem(itemID); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repositories.ErrRecordNotFound) {
 			return nil, apperrors.New(
 				http.StatusNotFound,
 				apperrors.CodeCartItemNotFound,

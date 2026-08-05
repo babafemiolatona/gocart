@@ -8,10 +8,9 @@ import (
 
 type PaymentRepository interface {
 	Create(payment *models.Payment) error
-	CreateTx(tx *gorm.DB, payment *models.Payment) error
 	GetByReference(reference string) (*models.Payment, error)
 	GetByOrderID(orderID uint) (*models.Payment, error)
-	TransitionStatusTx(tx *gorm.DB, reference string, from, to models.PaymentStatus) (bool, error)
+	TransitionStatus(reference string, from, to models.PaymentStatus) (bool, error)
 }
 
 type paymentRepository struct {
@@ -24,10 +23,6 @@ func NewPaymentRepository(db *gorm.DB) PaymentRepository {
 
 func (r *paymentRepository) Create(payment *models.Payment) error {
 	return r.db.Create(payment).Error
-}
-
-func (r *paymentRepository) CreateTx(tx *gorm.DB, payment *models.Payment) error {
-	return tx.Create(payment).Error
 }
 
 func (r *paymentRepository) GetByReference(reference string) (*models.Payment, error) {
@@ -52,8 +47,8 @@ func (r *paymentRepository) GetByOrderID(orderID uint) (*models.Payment, error) 
 	return &payment, nil
 }
 
-func (r *paymentRepository) TransitionStatusTx(tx *gorm.DB, reference string, from, to models.PaymentStatus) (bool, error) {
-	result := tx.Model(&models.Payment{}).
+func (r *paymentRepository) TransitionStatus(reference string, from, to models.PaymentStatus) (bool, error) {
+	result := r.db.Model(&models.Payment{}).
 		Where("reference = ? AND status = ?", reference, from).
 		Update("status", to)
 

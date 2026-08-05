@@ -8,8 +8,6 @@ import (
 	"gocart/internal/models"
 	"gocart/internal/repositories"
 	"net/http"
-
-	"gorm.io/gorm"
 )
 
 type CategoryService struct {
@@ -28,7 +26,7 @@ func (s *CategoryService) CreateCategory(req *dto.CategoryRequest) (*dto.Categor
 	}
 
 	if err := s.categoryRepo.Create(category); err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
+		if errors.Is(err, repositories.ErrDuplicate) {
 			return nil, apperrors.New(
 				http.StatusConflict,
 				apperrors.CodeCategoryExists,
@@ -104,7 +102,7 @@ func (s *CategoryService) UpdateCategory(req *dto.UpdateCategoryRequest, id uint
 
 	if err := s.categoryRepo.Update(id, updates); err != nil {
 
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
+		if errors.Is(err, repositories.ErrDuplicate) {
 			return nil, apperrors.New(
 				http.StatusConflict,
 				apperrors.CodeCategoryExists,

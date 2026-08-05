@@ -15,8 +15,6 @@ import (
 	"gocart/internal/repositories"
 	"gocart/internal/storage"
 	"mime/multipart"
-
-	"gorm.io/gorm"
 )
 
 type ProductService struct {
@@ -70,7 +68,7 @@ func (s *ProductService) CreateProduct(
 	}
 
 	if err := s.productRepo.Create(product); err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
+		if errors.Is(err, repositories.ErrDuplicate) {
 			return nil, apperrors.New(
 				http.StatusConflict,
 				apperrors.CodeProductExists,
@@ -295,7 +293,7 @@ func (s *ProductService) UpdateProduct(
 
 	if len(updates) > 0 {
 		if err := s.productRepo.Update(id, updates); err != nil {
-			if errors.Is(err, gorm.ErrDuplicatedKey) {
+			if errors.Is(err, repositories.ErrDuplicate) {
 				return nil, apperrors.New(
 					http.StatusConflict,
 					apperrors.CodeProductExists,
@@ -352,7 +350,7 @@ func (s *ProductService) DeleteProduct(merchantID uint, id uint) error {
 	}
 
 	if err := s.productRepo.Delete(id); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, repositories.ErrRecordNotFound) {
 			return apperrors.New(
 				http.StatusNotFound,
 				apperrors.CodeProductNotFound,

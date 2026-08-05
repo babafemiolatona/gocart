@@ -42,7 +42,6 @@ func SetupRoutes(
 		// Repositories
 		// ----------------------------------
 
-		authRepo := repositories.NewAuthRepository(db)
 		userRepo := repositories.NewUserRepository(db)
 		productRepo := repositories.NewProductRepository(db)
 		categoryRepo := repositories.NewCategoryRepository(db)
@@ -51,6 +50,7 @@ func SetupRoutes(
 		paymentRepo := repositories.NewPaymentRepository(db)
 		productImageRepo := repositories.NewProductImageRepository(db)
 		merchantRepo := repositories.NewMerchantRepository(db)
+		uow := repositories.NewUnitOfWork(db)
 
 		// ----------------------------------
 		// Services
@@ -72,6 +72,7 @@ func SetupRoutes(
 		)
 
 		orderService := services.NewOrderService(
+			uow,
 			orderRepo,
 			cartRepo,
 			productRepo,
@@ -79,6 +80,7 @@ func SetupRoutes(
 		)
 
 		paymentService := services.NewPaymentService(
+			uow,
 			paymentRepo,
 			orderRepo,
 			cartRepo,
@@ -86,8 +88,8 @@ func SetupRoutes(
 		)
 
 		merchantService := services.NewMerchantService(
+			uow,
 			merchantRepo,
-			authRepo,
 			orderRepo,
 			productRepo,
 		)

@@ -11,11 +11,10 @@ import (
 	"gocart/internal/mapper"
 	"gocart/internal/models"
 	"gocart/internal/repositories"
-
-	"gorm.io/gorm"
 )
 
 type PaymentService struct {
+	uow         *repositories.UnitOfWork
 	paymentRepo repositories.PaymentRepository
 	orderRepo   repositories.OrderRepository
 	cartRepo    repositories.CartRepository
@@ -23,12 +22,14 @@ type PaymentService struct {
 }
 
 func NewPaymentService(
+	uow *repositories.UnitOfWork,
 	paymentRepo repositories.PaymentRepository,
 	orderRepo repositories.OrderRepository,
 	cartRepo repositories.CartRepository,
 	productRepo repositories.ProductRepository,
 ) *PaymentService {
 	return &PaymentService{
+		uow:         uow,
 		paymentRepo: paymentRepo,
 		orderRepo:   orderRepo,
 		cartRepo:    cartRepo,
@@ -79,10 +80,9 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 		)
 	}
 
-	err = s.orderRepo.WithTransaction(func(tx *gorm.DB) error {
+	err = s.uow.WithTransaction(func(uow *repositories.UnitOfWork) error {
 
-		claimed, err := s.paymentRepo.TransitionStatusTx(
-			tx,
+		claimed, err := uow.Payment().TransitionStatus(
 			reference,
 			models.PaymentStatusPending,
 			models.PaymentStatusSucceeded,
@@ -102,8 +102,8 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 
 		for _, item := range cart.Items {
 
-			if err := s.productRepo.DecrementStockTx(tx, item.ProductID, item.Quantity); err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
+			if err := uow.Product().DecrementStock(item.ProductID, item.Quantity); err != nil {
+				if errors.Is(err, repositories.ErrRecordNotFound) {
 					return apperrors.New(
 						http.StatusNotFound,
 						apperrors.CodeProductNotFound,
@@ -130,7 +130,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 			}
 		}
 
-		if err := s.cartRepo.ClearCartTx(tx, cart.ID); err != nil {
+		if err := uow.Cart().ClearCart(cart.ID); err != nil {
 			return apperrors.New(
 				http.StatusInternalServerError,
 				apperrors.CodeClearCart,
@@ -139,8 +139,7 @@ func (s *PaymentService) ProcessPayment(userID uint, reference string) (*dto.Pay
 			)
 		}
 
-		if err := s.orderRepo.UpdateOrderStatusTx(
-			tx,
+		if err := uow.Order().UpdateOrderStatus(
 			order.ID,
 			models.OrderStatusConfirmed,
 		); err != nil {

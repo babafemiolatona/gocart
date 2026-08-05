@@ -5,15 +5,14 @@ import (
 	"net/http"
 
 	apperrors "gocart/internal/errors"
-
-	"gorm.io/gorm"
+	"gocart/internal/repositories"
 )
 
 func repoErr(
 	err error,
 	fetchCode, fetchMsg, notFoundCode, notFoundMsg string,
 ) *apperrors.AppError {
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if errors.Is(err, repositories.ErrRecordNotFound) {
 		return apperrors.New(http.StatusNotFound, notFoundCode, notFoundMsg, err)
 	}
 

@@ -3,10 +3,10 @@ package models
 import "time"
 
 type OrderItem struct {
-	ID        uint `gorm:"primaryKey" json:"id"`
-	OrderID   uint `gorm:"not null" json:"order_id"`
-	ProductID uint `gorm:"not null" json:"product_id"`
-	ProductName string `gorm:"not null" json:"product_name"`
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	OrderID     uint      `gorm:"not null" json:"order_id"`
+	ProductID   uint      `gorm:"not null" json:"product_id"`
+	ProductName string    `gorm:"not null" json:"product_name"`
 	Quantity    int       `gorm:"not null" json:"quantity"`
 	Price       int64     `gorm:"not null" json:"price"`
 	CreatedAt   time.Time `json:"created_at"`

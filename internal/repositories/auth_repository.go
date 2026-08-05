@@ -11,7 +11,6 @@ type AuthRepository interface {
 	GetByEmail(email string) (*models.User, error)
 	GetByEmailOrUsername(identifier string) (*models.User, error)
 	GetByID(id uint) (*models.User, error)
-	GetByIDTx(tx *gorm.DB, id uint) (*models.User, error)
 	ExistsByEmail(email string) (bool, error)
 }
 
@@ -77,15 +76,4 @@ func (r *authRepository) GetByID(id uint) (*models.User, error) {
 	}
 
 	return user, nil
-}
-
-func (r *authRepository) GetByIDTx(tx *gorm.DB, id uint) (*models.User, error) {
-	var user models.User
-
-	if err := tx.
-		First(&user, id).Error; err != nil {
-		return nil, err
-	}
-
-	return &user, nil
 }

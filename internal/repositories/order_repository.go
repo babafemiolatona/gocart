@@ -8,14 +8,12 @@ import (
 )
 
 type OrderRepository interface {
-	CreateOrderTx(tx *gorm.DB, order *models.Order) error
+	CreateOrder(order *models.Order) error
 	GetOrderByID(id uint) (*models.Order, error)
 	GetByUserIDAndIdempotencyKey(userID uint, key string) (*models.Order, error)
 	GetOrdersByUserID(userID uint, p *dto.PaginationQuery) ([]models.Order, int64, error)
 	UpdateOrderStatus(orderID uint, status models.OrderStatus) error
-	UpdateOrderStatusTx(tx *gorm.DB, orderID uint, status models.OrderStatus) error
-	TransitionOrderStatusTx(tx *gorm.DB, orderID uint, from, to models.OrderStatus) (bool, error)
-	WithTransaction(fn func(tx *gorm.DB) error) error
+	TransitionOrderStatus(orderID uint, from, to models.OrderStatus) (bool, error)
 	GetOrdersByMerchantID(merchantID uint, p *dto.PaginationQuery) ([]models.Order, int64, error)
 	GetMerchantOrderByID(merchantID uint, orderID uint) (*models.Order, error)
 
@@ -33,8 +31,8 @@ func NewOrderRepository(db *gorm.DB) OrderRepository {
 	return &orderRepository{db: db}
 }
 
-func (r *orderRepository) CreateOrderTx(tx *gorm.DB, order *models.Order) error {
-	return tx.Create(order).Error
+func (r *orderRepository) CreateOrder(order *models.Order) error {
+	return r.db.Create(order).Error
 }
 
 func (r *orderRepository) GetOrderByID(id uint) (*models.Order, error) {
@@ -117,29 +115,11 @@ func (r *orderRepository) UpdateOrderStatus(orderID uint, status models.OrderSta
 	return nil
 }
 
-func (r *orderRepository) UpdateOrderStatusTx(tx *gorm.DB, orderID uint, status models.OrderStatus) error {
-	result := tx.
-		Model(&models.Order{}).
-		Where("id = ?", orderID).
-		Update("status", status)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-
-	return nil
-}
-
-func (r *orderRepository) TransitionOrderStatusTx(
-	tx *gorm.DB,
+func (r *orderRepository) TransitionOrderStatus(
 	orderID uint,
 	from, to models.OrderStatus,
 ) (bool, error) {
-	result := tx.
+	result := r.db.
 		Model(&models.Order{}).
 		Where("id = ? AND status = ?", orderID, from).
 		Update("status", to)
@@ -149,12 +129,6 @@ func (r *orderRepository) TransitionOrderStatusTx(
 	}
 
 	return result.RowsAffected > 0, nil
-}
-
-func (r *orderRepository) WithTransaction(fn func(tx *gorm.DB) error) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		return fn(tx)
-	})
 }
 
 func (r *orderRepository) GetOrdersByMerchantID(

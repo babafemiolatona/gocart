@@ -21,8 +21,8 @@ type ProductRepository interface {
 	) ([]models.Product, int64, error)
 	Update(id uint, values map[string]interface{}) error
 	Delete(id uint) error
-	IncrementStockTx(tx *gorm.DB, id uint, qty int) error
-	DecrementStockTx(tx *gorm.DB, id uint, qty int) error
+	IncrementStock(id uint, qty int) error
+	DecrementStock(id uint, qty int) error
 	CountByMerchant(merchantID uint) (int64, error)
 	CountLowStockByMerchant(merchantID uint, threshold int) (int64, error)
 }
@@ -137,12 +137,11 @@ func (r *productRepository) Update(id uint, values map[string]interface{}) error
 		Updates(values).Error
 }
 
-func (r *productRepository) IncrementStockTx(
-	tx *gorm.DB,
+func (r *productRepository) IncrementStock(
 	id uint,
 	qty int,
 ) error {
-	result := tx.
+	result := r.db.
 		Model(&models.Product{}).
 		Where("id = ?", id).
 		Update("stock", gorm.Expr("stock + ?", qty))
@@ -158,12 +157,11 @@ func (r *productRepository) IncrementStockTx(
 	return nil
 }
 
-func (r *productRepository) DecrementStockTx(
-	tx *gorm.DB,
+func (r *productRepository) DecrementStock(
 	id uint,
 	qty int,
 ) error {
-	result := tx.
+	result := r.db.
 		Model(&models.Product{}).
 		Where("id = ? AND stock >= ?", id, qty).
 		Update("stock", gorm.Expr("stock - ?", qty))
@@ -175,7 +173,7 @@ func (r *productRepository) DecrementStockTx(
 	if result.RowsAffected == 0 {
 		var exists int64
 
-		if err := tx.
+		if err := r.db.
 			Model(&models.Product{}).
 			Where("id = ?", id).
 			Count(&exists).Error; err != nil {

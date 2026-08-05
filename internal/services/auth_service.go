@@ -15,7 +15,6 @@ import (
 	"gocart/internal/repositories"
 
 	"github.com/golang-jwt/jwt/v5"
-	"gorm.io/gorm"
 )
 
 type AuthService struct {
@@ -80,7 +79,7 @@ func (s *AuthService) Register(req *dto.RegisterRequest) (*dto.UserResponse, err
 	}
 
 	if err := s.authRepo.Create(user); err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
+		if errors.Is(err, repositories.ErrDuplicate) {
 			return nil, apperrors.New(
 				http.StatusConflict,
 				apperrors.CodeUserExists,
