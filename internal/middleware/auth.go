@@ -11,7 +11,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func AuthMiddleware(authService *services.AuthService) gin.HandlerFunc {
+type TokenVerifier interface {
+	VerifyToken(tokenStr string) (*services.CustomClaims, error)
+}
+
+func AuthMiddleware(authService TokenVerifier) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
