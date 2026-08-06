@@ -166,10 +166,12 @@ The server starts on the configured port and auto-migrates these tables:
 - **categories**
 - **products**
 - **product_images**
+- **merchants**
 - **carts**
 - **cart_items**
 - **orders**
 - **order_items**
+- **payments**
 
 ### 3. Build a local binary
 
@@ -417,6 +419,18 @@ A `Makefile` provides common tasks:
 | `make test` | Run all Go tests. |
 | `make lint` | Run `go vet ./...`. |
 | `make docs` | Regenerate the Swagger documentation into `docs/`. |
+
+## Testing
+
+The project includes unit tests across the handler, middleware, service, mapper, and repository layers. Run them with:
+
+```bash
+make test
+# or
+go test ./...
+```
+
+Repository tests use an in-memory **SQLite** database (via `gorm.io/driver/sqlite`). Because that driver uses the CGO-backed `mattn/go-sqlite3`, the repository tests require **CGO** to be enabled (`CGO_ENABLED=1`). If you build or test with `CGO_ENABLED=0`, exclude the repository package or re-enable CGO.
 
 ## Project Structure
 
