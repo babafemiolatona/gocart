@@ -146,7 +146,14 @@ func (r *orderRepository) GetOrdersByMerchantID(
 		Joins("JOIN products ON products.id = order_items.product_id").
 		Where("products.merchant_id = ?", merchantID)
 
-	if err := baseQuery.Count(&total).Error; err != nil {
+	countQuery := r.db.
+		Model(&models.Order{}).
+		Distinct("orders.id").
+		Joins("JOIN order_items ON order_items.order_id = orders.id").
+		Joins("JOIN products ON products.id = order_items.product_id").
+		Where("products.merchant_id = ?", merchantID)
+
+	if err := countQuery.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -201,6 +208,7 @@ func (r *orderRepository) CountByMerchant(merchantID uint) (int64, error) {
 
 	err := r.db.
 		Model(&models.Order{}).
+		Distinct("orders.id").
 		Joins("JOIN order_items ON order_items.order_id = orders.id").
 		Joins("JOIN products ON products.id = order_items.product_id").
 		Where("products.merchant_id = ?", merchantID).
@@ -219,6 +227,7 @@ func (r *orderRepository) CountByMerchantAndStatus(merchantID uint, status model
 
 	err := r.db.
 		Model(&models.Order{}).
+		Distinct("orders.id").
 		Joins("JOIN order_items ON order_items.order_id = orders.id").
 		Joins("JOIN products ON products.id = order_items.product_id").
 		Where("products.merchant_id = ?", merchantID).
@@ -236,12 +245,16 @@ func (r *orderRepository) SumRevenueByMerchant(merchantID uint) (int64, error) {
 
 	var total int64
 
+	orderIDs := r.db.
+		Model(&models.OrderItem{}).
+		Select("order_items.order_id").
+		Joins("JOIN products ON products.id = order_items.product_id").
+		Where("products.merchant_id = ?", merchantID)
+
 	err := r.db.
 		Model(&models.Order{}).
 		Select("COALESCE(SUM(orders.total), 0)").
-		Joins("JOIN order_items ON order_items.order_id = orders.id").
-		Joins("JOIN products ON products.id = order_items.product_id").
-		Where("products.merchant_id = ?", merchantID).
+		Where("orders.id IN (?)", orderIDs).
 		Where("orders.status = ?", models.OrderStatusDelivered).
 		Scan(&total).Error
 
