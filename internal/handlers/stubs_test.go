@@ -251,8 +251,10 @@ func (s *stubOrderService) CancelOrder(userID, orderID uint) error {
 }
 
 type stubPaymentService struct {
-	processFn func(userID uint, reference string) (*dto.PaymentResponse, error)
-	getFn     func(userID uint, reference string) (*dto.PaymentResponse, error)
+	processFn         func(userID uint, reference string) (*dto.PaymentResponse, error)
+	getFn             func(userID uint, reference string) (*dto.PaymentResponse, error)
+	processWebhookFn  func(body []byte, signature string) (*dto.PaymentResponse, error)
+	simulateWebhookFn func(reference string, status string) (*dto.PaymentResponse, error)
 }
 
 func (s *stubPaymentService) ProcessPayment(userID uint, reference string) (*dto.PaymentResponse, error) {
@@ -261,6 +263,14 @@ func (s *stubPaymentService) ProcessPayment(userID uint, reference string) (*dto
 
 func (s *stubPaymentService) GetPayment(userID uint, reference string) (*dto.PaymentResponse, error) {
 	return s.getFn(userID, reference)
+}
+
+func (s *stubPaymentService) ProcessWebhook(body []byte, signature string) (*dto.PaymentResponse, error) {
+	return s.processWebhookFn(body, signature)
+}
+
+func (s *stubPaymentService) SimulateWebhook(reference string, status string) (*dto.PaymentResponse, error) {
+	return s.simulateWebhookFn(reference, status)
 }
 
 type stubProductService struct {

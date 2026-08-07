@@ -54,13 +54,13 @@ func (s *stubAuthRepo) GetByID(id uint) (*models.User, error) {
 
 // stubCartRepo implements repositories.CartRepository for tests.
 type stubCartRepo struct {
-	createFn         func(cart *models.Cart) error
-	getWithItemsFn   func(userID uint) (*models.Cart, error)
-	addItemFn        func(item *models.CartItem) error
-	updateItemFn     func(item *models.CartItem) error
-	removeItemFn     func(cartItemID uint) error
-	updateTotalFn    func(cartID uint, total int64, itemCount int) error
-	clearCartFn      func(cartID uint) error
+	createFn       func(cart *models.Cart) error
+	getWithItemsFn func(userID uint) (*models.Cart, error)
+	addItemFn      func(item *models.CartItem) error
+	updateItemFn   func(item *models.CartItem) error
+	removeItemFn   func(cartItemID uint) error
+	updateTotalFn  func(cartID uint, total int64, itemCount int) error
+	clearCartFn    func(cartID uint) error
 }
 
 func (s *stubCartRepo) Create(c *models.Cart) error {
@@ -158,10 +158,10 @@ func (s *stubCategoryRepo) Delete(id uint) error {
 
 // stubMerchantRepo implements repositories.MerchantRepository for tests.
 type stubMerchantRepo struct {
-	createFn     func(m *models.Merchant) error
-	getByIDFn    func(id uint) (*models.Merchant, error)
-	getByUserFn  func(userID uint) (*models.Merchant, error)
-	updateFn     func(m *models.Merchant) error
+	createFn    func(m *models.Merchant) error
+	getByIDFn   func(id uint) (*models.Merchant, error)
+	getByUserFn func(userID uint) (*models.Merchant, error)
+	updateFn    func(m *models.Merchant) error
 }
 
 func (s *stubMerchantRepo) Create(m *models.Merchant) error {
@@ -194,18 +194,18 @@ func (s *stubMerchantRepo) Update(m *models.Merchant) error {
 
 // stubOrderRepo implements repositories.OrderRepository for tests.
 type stubOrderRepo struct {
-	createFn            func(order *models.Order) error
-	getByIDFn           func(id uint) (*models.Order, error)
-	getByIdemFn         func(userID uint, key string) (*models.Order, error)
-	getByUserFn         func(userID uint, p *dto.PaginationQuery) ([]models.Order, int64, error)
-	updateStatusFn      func(orderID uint, status models.OrderStatus) error
-	transitionFn        func(orderID uint, from, to models.OrderStatus) (bool, error)
-	getByMerchantFn     func(merchantID uint, p *dto.PaginationQuery) ([]models.Order, int64, error)
-	getMerchantByIDFn   func(merchantID uint, orderID uint) (*models.Order, error)
-	countByMerchantFn   func(merchantID uint) (int64, error)
-	countByStatusFn     func(merchantID uint, status models.OrderStatus) (int64, error)
-	sumRevenueFn        func(merchantID uint) (int64, error)
-	getRecentFn         func(merchantID uint, limit int) ([]models.Order, error)
+	createFn          func(order *models.Order) error
+	getByIDFn         func(id uint) (*models.Order, error)
+	getByIdemFn       func(userID uint, key string) (*models.Order, error)
+	getByUserFn       func(userID uint, p *dto.PaginationQuery) ([]models.Order, int64, error)
+	updateStatusFn    func(orderID uint, status models.OrderStatus) error
+	transitionFn      func(orderID uint, from, to models.OrderStatus) (bool, error)
+	getByMerchantFn   func(merchantID uint, p *dto.PaginationQuery) ([]models.Order, int64, error)
+	getMerchantByIDFn func(merchantID uint, orderID uint) (*models.Order, error)
+	countByMerchantFn func(merchantID uint) (int64, error)
+	countByStatusFn   func(merchantID uint, status models.OrderStatus) (int64, error)
+	sumRevenueFn      func(merchantID uint) (int64, error)
+	getRecentFn       func(merchantID uint, limit int) ([]models.Order, error)
 }
 
 func (s *stubOrderRepo) CreateOrder(o *models.Order) error {
@@ -294,10 +294,10 @@ func (s *stubOrderRepo) GetRecentOrdersByMerchant(merchantID uint, limit int) ([
 
 // stubPaymentRepo implements repositories.PaymentRepository for tests.
 type stubPaymentRepo struct {
-	createFn          func(p *models.Payment) error
-	getByReferenceFn  func(reference string) (*models.Payment, error)
-	getByOrderIDFn    func(orderID uint) (*models.Payment, error)
-	transitionFn      func(reference string, from, to models.PaymentStatus) (bool, error)
+	createFn         func(p *models.Payment) error
+	getByReferenceFn func(reference string) (*models.Payment, error)
+	getByOrderIDFn   func(orderID uint) (*models.Payment, error)
+	transitionFn     func(reference string, from, to models.PaymentStatus) (bool, error)
 }
 
 func (s *stubPaymentRepo) Create(p *models.Payment) error {
@@ -430,8 +430,8 @@ func (s *stubUserRepo) GetByID(id uint) (*models.User, error) {
 
 // stubStorage implements storage.Storage for tests.
 type stubStorage struct {
-	uploadFn   func(file multipart.File, header *multipart.FileHeader, productID uint) (string, error)
-	deleteFn   func(objectName string) error
+	uploadFn func(file multipart.File, header *multipart.FileHeader, productID uint) (string, error)
+	deleteFn func(objectName string) error
 }
 
 func (s *stubStorage) UploadProductImage(file multipart.File, header *multipart.FileHeader, productID uint) (string, error) {
@@ -461,14 +461,14 @@ type fakeScope struct {
 	user       repositories.UserRepository
 }
 
-func (s *fakeScope) Auth() repositories.AuthRepository                { return s.auth }
-func (s *fakeScope) User() repositories.UserRepository                { return s.user }
-func (s *fakeScope) Category() repositories.CategoryRepository        { return s.category }
-func (s *fakeScope) Cart() repositories.CartRepository                { return s.cart }
-func (s *fakeScope) Merchant() repositories.MerchantRepository        { return s.merchant }
-func (s *fakeScope) Order() repositories.OrderRepository              { return s.order }
-func (s *fakeScope) Payment() repositories.PaymentRepository          { return s.payment }
-func (s *fakeScope) Product() repositories.ProductRepository          { return s.product }
+func (s *fakeScope) Auth() repositories.AuthRepository                 { return s.auth }
+func (s *fakeScope) User() repositories.UserRepository                 { return s.user }
+func (s *fakeScope) Category() repositories.CategoryRepository         { return s.category }
+func (s *fakeScope) Cart() repositories.CartRepository                 { return s.cart }
+func (s *fakeScope) Merchant() repositories.MerchantRepository         { return s.merchant }
+func (s *fakeScope) Order() repositories.OrderRepository               { return s.order }
+func (s *fakeScope) Payment() repositories.PaymentRepository           { return s.payment }
+func (s *fakeScope) Product() repositories.ProductRepository           { return s.product }
 func (s *fakeScope) ProductImage() repositories.ProductImageRepository { return s.productImg }
 
 // fakeTxManager implements repositories.TransactionManager. The transaction

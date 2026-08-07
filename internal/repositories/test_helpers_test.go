@@ -73,22 +73,22 @@ func seedProductFixture(t *testing.T, db *gorm.DB) *seedProducts {
 	}
 
 	productA := &models.Product{
-		Name:        "The Go Programming Language",
-		Slug:        "go-book",
-		Sku:         "GO-001",
-		Price:       3000,
-		Stock:       10,
-		CategoryID:  category.ID,
-		MerchantID:  merchant.ID,
+		Name:       "The Go Programming Language",
+		Slug:       "go-book",
+		Sku:        "GO-001",
+		Price:      3000,
+		Stock:      10,
+		CategoryID: category.ID,
+		MerchantID: merchant.ID,
 	}
 	productB := &models.Product{
-		Name:        "Concurrency in Go",
-		Slug:        "go-concur",
-		Sku:         "GO-002",
-		Price:       5000,
-		Stock:       0,
-		CategoryID:  category.ID,
-		MerchantID:  merchant.ID,
+		Name:       "Concurrency in Go",
+		Slug:       "go-concur",
+		Sku:        "GO-002",
+		Price:      5000,
+		Stock:      0,
+		CategoryID: category.ID,
+		MerchantID: merchant.ID,
 	}
 	if err := db.Create(&productA).Error; err != nil {
 		t.Fatalf("create product A: %v", err)
@@ -136,7 +136,7 @@ func productRepo(db *gorm.DB) ProductRepository {
 	return NewProductRepository(db)
 }
 func paymentRepo(db *gorm.DB) PaymentRepository { return NewPaymentRepository(db) }
-func cartRepo(db *gorm.DB) CartRepository        { return NewCartRepository(db) }
+func cartRepo(db *gorm.DB) CartRepository       { return NewCartRepository(db) }
 
 func mustUser(t *testing.T, db *gorm.DB, id uint) *models.User {
 	t.Helper()
