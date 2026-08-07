@@ -85,6 +85,7 @@ func SetupRoutes(
 			orderRepo,
 			cartRepo,
 			productRepo,
+			config.CFG.WebhookSecret,
 		)
 
 		merchantService := services.NewMerchantService(
@@ -124,6 +125,20 @@ func SetupRoutes(
 			{
 				categories.GET("", categoryHandler.GetCategories)
 				categories.GET("/:id", categoryHandler.GetCategoryByID)
+			}
+
+			// Payment provider webhook — public, authenticated by signature.
+			webhooks := public.Group("/webhooks")
+			{
+				webhooks.POST("/payments", paymentHandler.PaymentWebhook)
+			}
+
+			// Dev-only helper that mimics a payment provider callback.
+			if config.CFG.Env != "production" {
+				dev := public.Group("/dev")
+				{
+					dev.POST("/simulate-payment", paymentHandler.SimulatePayment)
+				}
 			}
 		}
 

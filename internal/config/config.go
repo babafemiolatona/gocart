@@ -26,6 +26,8 @@ type Config struct {
 	JWTExpiry            time.Duration
 	TokenDurationMinutes int
 
+	WebhookSecret string
+
 	SeedAdminEmail    string
 	SeedAdminPassword string
 
@@ -65,6 +67,7 @@ func LoadConfig() (*Config, error) {
 		{"DB_NAME", &cfg.DatabaseName},
 		{"DB_SSL_MODE", &cfg.DatabaseSSLMode},
 		{"JWT_SECRET", &cfg.JWTSecret},
+		{"WEBHOOK_SECRET", &cfg.WebhookSecret},
 		{"MINIO_ENDPOINT", &cfg.MinioEndpoint},
 		{"MINIO_ACCESS_KEY", &cfg.MinioAccessKey},
 		{"MINIO_SECRET_KEY", &cfg.MinioSecretKey},

@@ -28,6 +28,7 @@ Gocart is a backend **REST API** for an e-commerce platform built with **Go**, *
 - **Checkout** converts the cart into an order and creates a pending payment; stock is deducted when the payment is processed.
 - **Checkout** accepts an optional `idempotency_key` to prevent duplicate orders.
 - **Cart totals** and **item counts** are recalculated after cart mutations.
+- **Signed payment webhooks** confirm or fail payments; the webhook is the source of truth that finalizes the order, so replaying a delivery is a safe no-op.
 
 ### Orders
 
@@ -105,6 +106,7 @@ The application loads environment variables from a local `.env` file unless `GO_
 | `DB_SSL_MODE` | Yes | Passed into the PostgreSQL DSN. |
 | `JWT_SECRET` | Yes | Signing key for JWT tokens. |
 | `JWT_EXPIRY` | Yes | Duration string such as `24h` or `168h`. |
+| `WEBHOOK_SECRET` | Yes | Shared secret used to verify payment webhook signatures (HMAC-SHA256). |
 | `MINIO_ENDPOINT` | Yes | MinIO endpoint, for example `localhost:9000`. |
 | `MINIO_ACCESS_KEY` | Yes | MinIO access key. |
 | `MINIO_SECRET_KEY` | Yes | MinIO secret key. |
@@ -131,6 +133,8 @@ DB_SSL_MODE=disable
 
 JWT_SECRET=change-me-in-production
 JWT_EXPIRY=24h
+
+WEBHOOK_SECRET=change-me-webhook-secret
 
 MINIO_ENDPOINT=localhost:9000
 MINIO_ACCESS_KEY=minioadmin
@@ -241,6 +245,16 @@ All routes below require `Authorization: Bearer <token>`.
 - `POST /api/v1/payments/:reference/process`
 - `GET /api/v1/payments/:reference`
 - `POST /api/v1/merchants/register`
+
+### Webhooks
+
+Public callback endpoint — authenticated by the `X-Webhook-Signature` header (HMAC-SHA256 of the raw body using `WEBHOOK_SECRET`), not by JWT.
+
+- `POST /api/v1/webhooks/payments`
+
+### Dev-only (skipped when `ENV=production`)
+
+- `POST /api/v1/dev/simulate-payment` — mimics a payment provider callback by building a signed webhook event.
 
 ### Merchant Routes
 

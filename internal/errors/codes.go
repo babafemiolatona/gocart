@@ -71,11 +71,15 @@ const (
 	CodeInvalidOrderStatus = "invalid_order_status"
 
 	// Payment
-	CodePaymentNotFound   = "payment_not_found"
-	CodeFetchPayment      = "fetch_payment_failed"
-	CodeCreatePayment     = "create_payment_failed"
-	CodeUpdatePayment     = "update_payment_failed"
-	CodeGenerateReference = "generate_reference_failed"
+	CodePaymentNotFound         = "payment_not_found"
+	CodeFetchPayment            = "fetch_payment_failed"
+	CodeCreatePayment           = "create_payment_failed"
+	CodeUpdatePayment           = "update_payment_failed"
+	CodeGenerateReference       = "generate_reference_failed"
+	CodeInvalidWebhookSignature = "invalid_webhook_signature"
+	CodeInvalidWebhookEvent     = "invalid_webhook_event"
+	CodeWebhookAmountMismatch   = "webhook_amount_mismatch"
+	CodeInvalidWebhookStatus    = "invalid_webhook_status"
 
 	// Merchant
 	CodeMerchantExists   = "merchant_exists"

@@ -51,6 +51,8 @@ type OrderService interface {
 type PaymentService interface {
 	ProcessPayment(userID uint, reference string) (*dto.PaymentResponse, error)
 	GetPayment(userID uint, reference string) (*dto.PaymentResponse, error)
+	ProcessWebhook(body []byte, signature string) (*dto.PaymentResponse, error)
+	SimulateWebhook(reference string, status string) (*dto.PaymentResponse, error)
 }
 
 type ProductService interface {
