@@ -275,6 +275,17 @@ definitions:
       updated_at:
         type: string
     type: object
+  dto.PaymentWebhookEvent:
+    properties:
+      amount:
+        type: integer
+      reference:
+        type: string
+      status:
+        type: string
+      timestamp:
+        type: string
+    type: object
   dto.ProductImageResponse:
     properties:
       created_at:
@@ -337,6 +348,13 @@ definitions:
     - last_name
     - password
     - username
+    type: object
+  dto.SimulatePaymentRequest:
+    properties:
+      reference:
+        type: string
+      status:
+        type: string
     type: object
   dto.UpdateCartItemRequest:
     properties:
@@ -849,6 +867,45 @@ paths:
       summary: Get category
       tags:
       - Categories
+  /api/v1/dev/simulate-payment:
+    post:
+      consumes:
+      - application/json
+      description: 'Dev-only: builds and delivers a signed webhook event as if sent
+        by a payment provider'
+      parameters:
+      - description: Webhook simulation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SimulatePaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaymentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      summary: Simulate a payment webhook
+      tags:
+      - Payments
   /api/v1/merchants/dashboard:
     get:
       description: Get dashboard metrics for the authenticated merchant
@@ -1732,6 +1789,49 @@ paths:
       summary: Get current user
       tags:
       - Users
+  /api/v1/webhooks/payments:
+    post:
+      consumes:
+      - application/json
+      description: Receives a signed payment-provider callback and finalizes the payment
+      parameters:
+      - description: HMAC-SHA256 signature of the raw body
+        in: header
+        name: X-Webhook-Signature
+        required: true
+        type: string
+      - description: Webhook event
+        in: body
+        name: event
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PaymentWebhookEvent'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaymentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      summary: Handle payment provider webhook
+      tags:
+      - Payments
 securityDefinitions:
   BearerAuth:
     in: header

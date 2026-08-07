@@ -657,6 +657,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/dev/simulate-payment": {
+            "post": {
+                "description": "Dev-only: builds and delivers a signed webhook event as if sent by a payment provider",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Simulate a payment webhook",
+                "parameters": [
+                    {
+                        "description": "Webhook simulation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.SimulatePaymentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/merchants/dashboard": {
             "get": {
                 "security": [
@@ -2027,6 +2085,71 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/v1/webhooks/payments": {
+            "post": {
+                "description": "Receives a signed payment-provider callback and finalizes the payment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Handle payment provider webhook",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "HMAC-SHA256 signature of the raw body",
+                        "name": "X-Webhook-Signature",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Webhook event",
+                        "name": "event",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentWebhookEvent"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errors.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errors.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errors.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errors.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -2452,6 +2575,23 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PaymentWebhookEvent": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "reference": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.ProductImageResponse": {
             "type": "object",
             "properties": {
@@ -2541,6 +2681,17 @@ const docTemplate = `{
                     "minLength": 6
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.SimulatePaymentRequest": {
+            "type": "object",
+            "properties": {
+                "reference": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
