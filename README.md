@@ -446,6 +446,8 @@ go test ./...
 
 Repository tests use an in-memory **SQLite** database (via `gorm.io/driver/sqlite`). Because that driver uses the CGO-backed `mattn/go-sqlite3`, the repository tests require **CGO** to be enabled (`CGO_ENABLED=1`). If you build or test with `CGO_ENABLED=0`, exclude the repository package or re-enable CGO.
 
+An importable endpoint-to-endpoint **Postman collection** covering the full flow (register → catalog → admin → merchant → cart → checkout → webhook → orders → fulfillment) is included at `gocart-e2e.postman_collection.json`. Set `baseUrl`, `webhookSecret`, and the admin credentials in the collection variables, then run Login to populate the auth tokens.
+
 ## Project Structure
 
 ```

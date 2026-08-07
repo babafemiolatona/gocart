@@ -1,0 +1,1655 @@
+{
+  "variable": [
+    {
+      "value": "http://localhost:8080/api/v1",
+      "key": "baseUrl"
+    },
+    {
+      "value": "change-me-webhook-secret",
+      "key": "webhookSecret"
+    },
+    {
+      "value": "",
+      "key": "token"
+    },
+    {
+      "value": "",
+      "key": "adminToken"
+    },
+    {
+      "value": "",
+      "key": "categoryId"
+    },
+    {
+      "value": "",
+      "key": "productId"
+    },
+    {
+      "value": "",
+      "key": "capoId"
+    },
+    {
+      "value": "",
+      "key": "itemId"
+    },
+    {
+      "value": "",
+      "key": "orderId"
+    },
+    {
+      "value": "",
+      "key": "paymentRef"
+    },
+    {
+      "value": "",
+      "key": "paymentRef2"
+    },
+    {
+      "value": "",
+      "key": "cancelOrderId"
+    }
+  ],
+  "item": [
+    {
+      "item": [
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"username\": \"alice\",\n  \"password\": \"secret123\",\n  \"confirm_password\": \"secret123\",\n  \"first_name\": \"Alice\",\n  \"last_name\": \"Wonder\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('register ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Register customer"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"username_or_email\": \"alice@example.com\",\n  \"password\": \"secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login returns token', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.have.property('token');",
+                  "    pm.collectionVariables.set('token', pm.response.json().token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Login customer (saves token)"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/users/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('profile ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Get my profile"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/users/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 expected', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "name": "Negative: no token"
+        }
+      ],
+      "name": "1. Auth & Account"
+    },
+    {
+      "item": [
+        {
+          "request": {
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/products"
+          },
+          "name": "List products"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/products?category_id={{categoryId}}&min_price=10&max_price=100&in_stock=true"
+          },
+          "name": "Products with filters"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/products?search=stratocaster&page=1&page_size=5&sort=price&order=asc"
+          },
+          "name": "Products search + sort"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/products/{{productId}}"
+          },
+          "name": "Get product"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/categories"
+          },
+          "name": "List categories"
+        }
+      ],
+      "name": "2. Public Catalog"
+    },
+    {
+      "item": [
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"username_or_email\": \"admin@gocart.com\",\n  \"password\": \"change-this-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('admin login returns token', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.collectionVariables.set('adminToken', pm.response.json().token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Admin login (saves adminToken)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"name\": \"Guitars\",\n  \"slug\": \"guitars\",\n  \"description\": \"Electric and acoustic guitars\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/categories"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('create category', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('categoryId', String(pm.response.json().id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Create category"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"name\": \"Guitars & Basses\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "method": "PUT",
+            "url": "{{baseUrl}}/admin/categories/{{categoryId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('update ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Update category"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"name\": \"Nope\",\n  \"slug\": \"nope\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/categories"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 expected', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "name": "Negative: customer cannot create category"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/categories/{{categoryId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('delete ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Delete category"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"name\": \"Guitars\",\n  \"slug\": \"guitars\",\n  \"description\": \"Electric and acoustic guitars\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/categories"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('create category', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('categoryId', String(pm.response.json().id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Recreate category (for later steps)"
+        }
+      ],
+      "name": "3. Admin: Categories"
+    },
+    {
+      "item": [
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"business_name\": \"Alice's Instruments\",\n  \"description\": \"Hand-picked guitars\",\n  \"phone\": \"+1-555-0100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/merchants/register"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('merchant registered', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "name": "Register merchant (uses customer token)"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/merchants/me"
+          },
+          "name": "Get merchant profile"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"description\": \"Hand-picked vintage guitars\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "PUT",
+            "url": "{{baseUrl}}/merchants/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('update ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Update merchant profile"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"name\": \"Stratocaster\",\n  \"description\": \"Vintage electric guitar\",\n  \"price\": 899.99,\n  \"stock\": 10,\n  \"category_id\": {{categoryId}},\n  \"sku\": \"STR-001\",\n  \"slug\": \"stratocaster\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/merchants/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('create guitar', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('productId', String(pm.response.json().id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Create product: Stratocaster (JSON, no image)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"name\": \"Capo\",\n  \"description\": \"Clamp capo\",\n  \"price\": 9.99,\n  \"stock\": 3,\n  \"category_id\": {{categoryId}},\n  \"sku\": \"CAPO-001\",\n  \"slug\": \"capo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/merchants/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('create capo', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('capoId', String(pm.response.json().id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Create product: Capo (JSON, no image)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"price\": 799.99\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "PUT",
+            "url": "{{baseUrl}}/merchants/products/{{productId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('update ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Update product price"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/merchants/products"
+          },
+          "name": "List merchant products"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "DELETE",
+            "url": "{{baseUrl}}/merchants/products/{{capoId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('delete ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Delete product (capo)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"name\": \"Capo\",\n  \"description\": \"Clamp capo\",\n  \"price\": 9.99,\n  \"stock\": 3,\n  \"category_id\": {{categoryId}},\n  \"sku\": \"CAPO-002\",\n  \"slug\": \"capo-2\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/merchants/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('create capo', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('capoId', String(pm.response.json().id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Recreate capo (for cart tests)"
+        }
+      ],
+      "name": "4. Merchant"
+    },
+    {
+      "item": [
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/cart"
+          },
+          "name": "Get cart (auto-created)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"product_id\": {{productId}},\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/cart/items"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('add item', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.collectionVariables.set('itemId', String(pm.response.json().items[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Add guitar x2"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"product_id\": {{capoId}},\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/cart/items"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('add ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Add capo x1"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"quantity\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "PUT",
+            "url": "{{baseUrl}}/cart/items/{{itemId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('update ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Update item quantity to 3"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"product_id\": {{capoId}},\n  \"quantity\": 999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/cart/items"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 expected', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "name": "Negative: overstock (409)"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "DELETE",
+            "url": "{{baseUrl}}/cart/items/{{itemId}}"
+          },
+          "name": "Remove item"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "DELETE",
+            "url": "{{baseUrl}}/cart"
+          },
+          "name": "Clear cart"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"product_id\": {{productId}},\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/cart/items"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('add ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Re-add items for checkout"
+        }
+      ],
+      "name": "5. Shopping Cart"
+    },
+    {
+      "item": [
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"shipping_address\": \"123 Broad Street, Lagos\",\n  \"idempotency_key\": \"order-001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/checkout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('checkout ok', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const j = pm.response.json();",
+                  "    pm.collectionVariables.set('orderId', String(j.order.id));",
+                  "    pm.collectionVariables.set('paymentRef', j.payment.reference);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Checkout (saves orderId + paymentRef)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"shipping_address\": \"123 Broad Street, Lagos\",\n  \"idempotency_key\": \"order-001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/checkout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('same order returned', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(String(pm.response.json().order.id)).to.eql(pm.collectionVariables.get('orderId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Checkout same key (idempotent - same order)"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/payments/{{paymentRef}}"
+          },
+          "name": "Get payment"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/payments/{{paymentRef}}/process"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('payment succeeded', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('succeeded');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Process payment (manual)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"shipping_address\": \"456 Elm St\",\n  \"idempotency_key\": \"order-webhook\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/checkout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('checkout ok', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.collectionVariables.set('paymentRef2', pm.response.json().payment.reference);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Create fresh order for webhook (paymentRef2)"
+        }
+      ],
+      "name": "6. Checkout & Payments"
+    },
+    {
+      "item": [
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"reference\": \"{{paymentRef2}}\",\n  \"status\": \"succeeded\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/webhooks/payments"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const resolveVars = (str) => str.replace(/\\{\\{\\s*([^}]+)\\s*\\}\\}/g, (m, k) => pm.collectionVariables.get(k) || m);",
+                  "const secret = pm.collectionVariables.get('webhookSecret');",
+                  "const body = resolveVars(pm.request.body.raw);",
+                  "const sig = CryptoJS.HmacSHA256(body, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Webhook-Signature', value: sig });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('webhook accepted', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('succeeded');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Deliver signed webhook (succeeded)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"reference\": \"{{paymentRef2}}\",\n  \"status\": \"succeeded\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/webhooks/payments"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const resolveVars = (str) => str.replace(/\\{\\{\\s*([^}]+)\\s*\\}\\}/g, (m, k) => pm.collectionVariables.get(k) || m);",
+                  "const secret = pm.collectionVariables.get('webhookSecret');",
+                  "const body = resolveVars(pm.request.body.raw);",
+                  "const sig = CryptoJS.HmacSHA256(body, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Webhook-Signature', value: sig });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('still 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Replay same event (no-op)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"reference\": \"{{paymentRef2}}\",\n  \"status\": \"succeeded\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/webhooks/payments"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 expected', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "name": "Negative: missing signature (401)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"reference\": \"{{paymentRef2}}\",\n  \"status\": \"succeeded\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/webhooks/payments"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const resolveVars = (str) => str.replace(/\\{\\{\\s*([^}]+)\\s*\\}\\}/g, (m, k) => pm.collectionVariables.get(k) || m);",
+                  "const secret = pm.collectionVariables.get('webhookSecret');",
+                  "const body = resolveVars(pm.request.body.raw);",
+                  "const sig = CryptoJS.HmacSHA256(body, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Webhook-Signature', value: sig });",
+                  "pm.request.body.raw = pm.request.body.raw.replace('succeeded', 'failed');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 expected', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "name": "Negative: tampered body after signing (401)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"reference\": \"{{paymentRef2}}\",\n  \"status\": \"succeeded\",\n  \"amount\": 42\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/webhooks/payments"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const resolveVars = (str) => str.replace(/\\{\\{\\s*([^}]+)\\s*\\}\\}/g, (m, k) => pm.collectionVariables.get(k) || m);",
+                  "const secret = pm.collectionVariables.get('webhookSecret');",
+                  "const body = resolveVars(pm.request.body.raw);",
+                  "const sig = CryptoJS.HmacSHA256(body, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Webhook-Signature', value: sig });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 expected', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "name": "Negative: amount mismatch (400)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"reference\": \"{{paymentRef2}}\",\n  \"status\": \"succeeded\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/dev/simulate-payment"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('simulated ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Dev: simulate payment (auto-signed)"
+        }
+      ],
+      "name": "7. Payment Webhook"
+    },
+    {
+      "item": [
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/orders?page=1&page_size=10&order=desc"
+          },
+          "name": "List my orders"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/orders/{{orderId}}"
+          },
+          "name": "Get order details"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"shipping_address\": \"789 Oak Ave\",\n  \"idempotency_key\": \"order-cancel\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/checkout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('checkout ok', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.collectionVariables.set('cancelOrderId', String(pm.response.json().order.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Create order to cancel"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "PUT",
+            "url": "{{baseUrl}}/orders/{{cancelOrderId}}/cancel"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cancelled', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('cancelled');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Cancel order"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "PUT",
+            "url": "{{baseUrl}}/orders/{{cancelOrderId}}/cancel"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 expected', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "name": "Negative: cancel again (400)"
+        }
+      ],
+      "name": "8. Orders"
+    },
+    {
+      "item": [
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/merchants/orders"
+          },
+          "name": "Merchant order list"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/merchants/orders/{{orderId}}"
+          },
+          "name": "Merchant order detail"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"status\": \"shipped\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "PATCH",
+            "url": "{{baseUrl}}/merchants/orders/{{orderId}}/status"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('shipped', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Set status: shipped"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"status\": \"delivered\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "PATCH",
+            "url": "{{baseUrl}}/merchants/orders/{{orderId}}/status"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('delivered', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "name": "Set status: delivered"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"shipping_address\": \"10 Skip St\",\n  \"idempotency_key\": \"order-skip\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/checkout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('checkout ok', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.collectionVariables.set('skipOrderId', String(pm.response.json().order.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Negative: skip state (400)"
+        },
+        {
+          "request": {
+            "body": {
+              "raw": "{\n  \"status\": \"delivered\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "mode": "raw"
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "PATCH",
+            "url": "{{baseUrl}}/merchants/orders/{{skipOrderId}}/status"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 expected', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "name": "Negative: confirmed -> delivered directly (400)"
+        },
+        {
+          "request": {
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "method": "GET",
+            "url": "{{baseUrl}}/merchants/dashboard"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('dashboard has metrics', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.have.property('total_revenue');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "name": "Dashboard metrics"
+        }
+      ],
+      "name": "9. Merchant Fulfillment"
+    }
+  ],
+  "info": {
+    "_postman_id": "c34c385f-fc84-439c-9ac8-81e09f15b66d",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "name": "Gocart E2E",
+    "description": "End-to-end flow for gocart: register, catalog, admin, merchant, cart, checkout, webhook, orders, fulfillment. Set baseUrl and webhookSecret in collection variables."
+  }
+}
