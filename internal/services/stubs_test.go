@@ -15,6 +15,7 @@ type stubAuthRepo struct {
 	getByEmailFn      func(email string) (*models.User, error)
 	getByIdentifierFn func(identifier string) (*models.User, error)
 	getByIDFn         func(id uint) (*models.User, error)
+	updatePasswordFn  func(id uint, hashedPassword string) error
 }
 
 func (s *stubAuthRepo) Create(u *models.User) error {
@@ -50,6 +51,13 @@ func (s *stubAuthRepo) GetByID(id uint) (*models.User, error) {
 		return s.getByIDFn(id)
 	}
 	return nil, repositories.ErrRecordNotFound
+}
+
+func (s *stubAuthRepo) UpdatePassword(id uint, hashedPassword string) error {
+	if s.updatePasswordFn != nil {
+		return s.updatePasswordFn(id, hashedPassword)
+	}
+	return nil
 }
 
 // stubCartRepo implements repositories.CartRepository for tests.

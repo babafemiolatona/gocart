@@ -121,8 +121,9 @@ func newRequestWithBody(t *testing.T, method, path string, body *bytes.Buffer, c
 // ---- stub services ----
 
 type stubAuthService struct {
-	registerFn func(req *dto.RegisterRequest) (*dto.UserResponse, error)
-	loginFn    func(req *dto.LoginRequest) (*dto.AuthResponse, error)
+	registerFn       func(req *dto.RegisterRequest) (*dto.UserResponse, error)
+	loginFn          func(req *dto.LoginRequest) (*dto.AuthResponse, error)
+	changePasswordFn func(userID uint, req *dto.ChangePasswordRequest) error
 }
 
 func (s *stubAuthService) Register(req *dto.RegisterRequest) (*dto.UserResponse, error) {
@@ -131,6 +132,13 @@ func (s *stubAuthService) Register(req *dto.RegisterRequest) (*dto.UserResponse,
 
 func (s *stubAuthService) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 	return s.loginFn(req)
+}
+
+func (s *stubAuthService) ChangePassword(userID uint, req *dto.ChangePasswordRequest) error {
+	if s.changePasswordFn != nil {
+		return s.changePasswordFn(userID, req)
+	}
+	return nil
 }
 
 type stubCartService struct {

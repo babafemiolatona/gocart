@@ -246,3 +246,122 @@ func TestVerifyTokenRejectsGarbage(t *testing.T) {
 		t.Error("expected error for invalid token")
 	}
 }
+
+func TestChangePasswordSuccess(t *testing.T) {
+	user := &models.User{ID: 7, Username: "alice"}
+	if err := user.HashPassword("oldpass123"); err != nil {
+		t.Fatalf("hash current password: %v", err)
+	}
+
+	var updatedID uint
+	var updatedHash string
+	repo := &stubAuthRepo{
+		getByIDFn: func(id uint) (*models.User, error) {
+			return user, nil
+		},
+		updatePasswordFn: func(id uint, hashedPassword string) error {
+			updatedID = id
+			updatedHash = hashedPassword
+			return nil
+		},
+	}
+	svc := newTestAuthService(repo)
+
+	err := svc.ChangePassword(7, &dto.ChangePasswordRequest{
+		CurrentPassword: "oldpass123",
+		NewPassword:     "newpass123",
+		ConfirmPassword: "newpass123",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if updatedID != 7 {
+		t.Errorf("want update for user 7, got %d", updatedID)
+	}
+	hashed := &models.User{Password: updatedHash}
+	if !hashed.VerifyPassword("newpass123") {
+		t.Error("want stored password to verify against the new password")
+	}
+	if hashed.VerifyPassword("oldpass123") {
+		t.Error("want old password to no longer verify")
+	}
+}
+
+func TestChangePasswordWrongCurrentPassword(t *testing.T) {
+	user := &models.User{ID: 7}
+	if err := user.HashPassword("oldpass123"); err != nil {
+		t.Fatalf("hash current password: %v", err)
+	}
+
+	repo := &stubAuthRepo{
+		getByIDFn: func(id uint) (*models.User, error) { return user, nil },
+	}
+	svc := newTestAuthService(repo)
+
+	err := svc.ChangePassword(7, &dto.ChangePasswordRequest{
+		CurrentPassword: "wrong-password",
+		NewPassword:     "newpass123",
+		ConfirmPassword: "newpass123",
+	})
+	assertAppError(t, err, http.StatusUnauthorized, apperrors.CodeInvalidCredentials)
+}
+
+func TestChangePasswordValidationErrors(t *testing.T) {
+	svc := newTestAuthService(&stubAuthRepo{})
+
+	tests := []struct {
+		name string
+		req  *dto.ChangePasswordRequest
+	}{
+		{"missing current", &dto.ChangePasswordRequest{NewPassword: "newpass123", ConfirmPassword: "newpass123"}},
+		{"short new password", &dto.ChangePasswordRequest{CurrentPassword: "oldpass123", NewPassword: "abc", ConfirmPassword: "abc"}},
+		{"mismatched confirmation", &dto.ChangePasswordRequest{CurrentPassword: "oldpass123", NewPassword: "newpass123", ConfirmPassword: "different"}},
+		{"same as current", &dto.ChangePasswordRequest{CurrentPassword: "newpass123", NewPassword: "newpass123", ConfirmPassword: "newpass123"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := svc.ChangePassword(7, tt.req)
+			assertAppError(t, err, http.StatusBadRequest, apperrors.CodeValidationError)
+		})
+	}
+}
+
+func TestChangePasswordUserNotFound(t *testing.T) {
+	repo := &stubAuthRepo{
+		getByIDFn: func(id uint) (*models.User, error) {
+			return nil, repositories.ErrRecordNotFound
+		},
+	}
+	svc := newTestAuthService(repo)
+
+	err := svc.ChangePassword(99, &dto.ChangePasswordRequest{
+		CurrentPassword: "oldpass123",
+		NewPassword:     "newpass123",
+		ConfirmPassword: "newpass123",
+	})
+	assertAppError(t, err, http.StatusNotFound, apperrors.CodeUserNotFound)
+}
+
+func TestChangePasswordUpdateFails(t *testing.T) {
+	user := &models.User{ID: 7}
+	if err := user.HashPassword("oldpass123"); err != nil {
+		t.Fatalf("hash current password: %v", err)
+	}
+
+	repo := &stubAuthRepo{
+		getByIDFn: func(id uint) (*models.User, error) { return user, nil },
+		updatePasswordFn: func(id uint, hashedPassword string) error {
+			return errBoom
+		},
+	}
+	svc := newTestAuthService(repo)
+
+	err := svc.ChangePassword(7, &dto.ChangePasswordRequest{
+		CurrentPassword: "oldpass123",
+		NewPassword:     "newpass123",
+		ConfirmPassword: "newpass123",
+	})
+	assertAppError(t, err, http.StatusInternalServerError, apperrors.CodeUpdatePassword)
+}

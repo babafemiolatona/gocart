@@ -109,3 +109,60 @@ func TestLoginUnauthorized(t *testing.T) {
 		t.Errorf("expected invalid_credentials, got %q", code)
 	}
 }
+
+func TestChangePasswordSuccess(t *testing.T) {
+	svc := &stubAuthService{
+		changePasswordFn: func(userID uint, req *dto.ChangePasswordRequest) error {
+			if userID != 7 {
+				t.Errorf("expected user 7, got %d", userID)
+			}
+			return nil
+		},
+	}
+	r := newTestRouter(7, nil)
+	registerHandler(r, http.MethodPut, "/users/me/password", NewAuthHandler(svc).ChangePassword)
+
+	w := doRequest(t, r, http.MethodPut, "/users/me/password", `{"current_password":"oldpass123","new_password":"newpass123","confirm_password":"newpass123"}`)
+	assertStatus(t, w, http.StatusOK)
+}
+
+func TestChangePasswordUnauthorized(t *testing.T) {
+	svc := &stubAuthService{}
+	r := newTestRouter(0, nil)
+	registerHandler(r, http.MethodPut, "/users/me/password", NewAuthHandler(svc).ChangePassword)
+
+	w := doRequest(t, r, http.MethodPut, "/users/me/password", `{"current_password":"oldpass123","new_password":"newpass123","confirm_password":"newpass123"}`)
+	assertStatus(t, w, http.StatusUnauthorized)
+
+	code, _ := decodeError(t, w)
+	if code != "unauthorized" {
+		t.Errorf("expected unauthorized, got %q", code)
+	}
+}
+
+func TestChangePasswordValidationError(t *testing.T) {
+	svc := &stubAuthService{}
+	r := newTestRouter(7, nil)
+	registerHandler(r, http.MethodPut, "/users/me/password", NewAuthHandler(svc).ChangePassword)
+
+	w := doRequest(t, r, http.MethodPut, "/users/me/password", `{"current_password":"oldpass123","new_password":"short"}`)
+	assertStatus(t, w, http.StatusBadRequest)
+}
+
+func TestChangePasswordServiceError(t *testing.T) {
+	svc := &stubAuthService{
+		changePasswordFn: func(userID uint, req *dto.ChangePasswordRequest) error {
+			return appErr(http.StatusUnauthorized, "invalid_credentials", "current password is incorrect")
+		},
+	}
+	r := newTestRouter(7, nil)
+	registerHandler(r, http.MethodPut, "/users/me/password", NewAuthHandler(svc).ChangePassword)
+
+	w := doRequest(t, r, http.MethodPut, "/users/me/password", `{"current_password":"wrong","new_password":"newpass123","confirm_password":"newpass123"}`)
+	assertStatus(t, w, http.StatusUnauthorized)
+
+	code, message := decodeError(t, w)
+	if code != "invalid_credentials" || message != "current password is incorrect" {
+		t.Errorf("unexpected error: %q %q", code, message)
+	}
+}
