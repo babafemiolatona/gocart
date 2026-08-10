@@ -34,7 +34,9 @@ type Config struct {
 	UploadDir     string
 	MaxUploadSize int64
 
-	// MinIO
+	LoginRateLimit  int
+	LoginRateWindow int
+
 	MinioEndpoint  string
 	MinioAccessKey string
 	MinioSecretKey string
@@ -99,6 +101,18 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("invalid TOKEN_DURATION_MINUTES: %w", err)
 	}
 	cfg.TokenDurationMinutes = tokenMinutes
+
+	loginRateLimit, err := strconv.Atoi(optionalEnv("LOGIN_RATE_LIMIT", "5"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid LOGIN_RATE_LIMIT: %w", err)
+	}
+	cfg.LoginRateLimit = loginRateLimit
+
+	loginRateWindow, err := strconv.Atoi(optionalEnv("LOGIN_RATE_WINDOW", "60"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid LOGIN_RATE_WINDOW: %w", err)
+	}
+	cfg.LoginRateWindow = loginRateWindow
 
 	CFG = cfg
 	return cfg, nil

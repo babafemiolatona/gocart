@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"time"
+
 	"gocart/internal/config"
 	"gocart/internal/handlers"
 	"gocart/internal/middleware"
@@ -35,7 +37,15 @@ func SetupRoutes(
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/register", authHandler.Register)
-			auth.POST("/login", authHandler.Login)
+			auth.POST("/login",
+				middleware.RateLimitMiddleware(
+					middleware.NewRateLimiter(
+						config.CFG.LoginRateLimit,
+						time.Duration(config.CFG.LoginRateWindow)*time.Second,
+					),
+				),
+				authHandler.Login,
+			)
 		}
 
 		// ----------------------------------
@@ -97,6 +107,13 @@ func SetupRoutes(
 
 		userService := services.NewUserService(userRepo)
 
+		adminService := services.NewAdminService(
+			userRepo,
+			merchantRepo,
+			productRepo,
+			orderRepo,
+		)
+
 		// ----------------------------------
 		// Handlers
 		// ----------------------------------
@@ -108,6 +125,7 @@ func SetupRoutes(
 		orderHandler := handlers.NewOrderHandler(orderService)
 		paymentHandler := handlers.NewPaymentHandler(paymentService)
 		merchantHandler := handlers.NewMerchantHandler(merchantService)
+		adminHandler := handlers.NewAdminHandler(adminService)
 
 		// ----------------------------------
 		// Public Routes
@@ -230,6 +248,8 @@ func SetupRoutes(
 			middleware.RequireRole(models.RoleAdmin),
 		)
 		{
+			admin.GET("/dashboard", adminHandler.GetDashboard)
+
 			categories := admin.Group("/categories")
 			{
 				categories.POST("", categoryHandler.CreateCategory)

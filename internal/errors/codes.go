@@ -3,6 +3,7 @@ package errors
 const (
 	CodeValidationError = "validation_error"
 	CodeInternalServer  = "internal_server_error"
+	CodeTooManyRequests = "too_many_requests"
 
 	// Auth
 	CodeUnauthorized     = "unauthorized"
@@ -89,4 +90,7 @@ const (
 	CodeFetchMerchant    = "fetch_merchant_failed"
 	CodeUpdateMerchant   = "update_merchant_failed"
 	CodeFetchDashboard   = "fetch_dashboard_failed"
+
+	// Admin
+	CodeFetchAdminDashboard = "fetch_admin_dashboard_failed"
 )

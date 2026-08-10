@@ -115,6 +115,8 @@ The application loads environment variables from a local `.env` file unless `GO_
 | `UPLOAD_DIR` | No | Defaults to `./uploads`. |
 | `MAX_UPLOAD_SIZE` | Yes | Parsed as an integer. |
 | `TOKEN_DURATION_MINUTES` | No | Defaults to `60`. |
+| `LOGIN_RATE_LIMIT` | No | Max login attempts per IP within the window. Defaults to `5`. |
+| `LOGIN_RATE_WINDOW` | No | Login rate-limit window in seconds. Defaults to `60`. |
 | `SEED_ADMIN_EMAIL` | No | If set, seeds an admin user on startup. |
 | `SEED_ADMIN_PASSWORD` | No | If set, seeds an admin user on startup. |
 
@@ -144,6 +146,10 @@ MINIO_USE_SSL=false
 
 MAX_UPLOAD_SIZE=10485760
 TOKEN_DURATION_MINUTES=60
+
+# Optional; defaults to 5 attempts / 60 seconds per IP on /auth/login
+LOGIN_RATE_LIMIT=5
+LOGIN_RATE_WINDOW=60
 
 # Optional; if unset, no admin is seeded
 SEED_ADMIN_EMAIL=admin@gocart.com
@@ -234,6 +240,7 @@ All routes below require `Authorization: Bearer <token>`.
 
 - `GET /api/v1/users/me`
 - `PUT /api/v1/users/me/password` — change password (requires `current_password`, `new_password`, `confirm_password`)
+- `GET /api/v1/admin/dashboard` — admin-only platform metrics (users, merchants, products, orders, revenue, orders by status)
 - `GET /api/v1/cart`
 - `POST /api/v1/cart/items`
 - `PUT /api/v1/cart/items/:itemID`
