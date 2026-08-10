@@ -9,6 +9,24 @@ definitions:
     - product_id
     - quantity
     type: object
+  dto.AdminDashboardResponse:
+    properties:
+      orders_by_status:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      total_merchants:
+        type: integer
+      total_orders:
+        type: integer
+      total_products:
+        type: integer
+      total_revenue:
+        type: number
+      total_users:
+        type: integer
+    type: object
   dto.AuthResponse:
     properties:
       expires_at:
@@ -601,6 +619,33 @@ paths:
       summary: Update category
       tags:
       - Categories
+  /api/v1/admin/dashboard:
+    get:
+      description: Get platform-wide metrics for admins
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AdminDashboardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get admin dashboard
+      tags:
+      - Admin
   /api/v1/auth/login:
     post:
       consumes:
