@@ -11,6 +11,7 @@ type MerchantRepository interface {
 	GetByID(id uint) (*models.Merchant, error)
 	GetByUserID(userID uint) (*models.Merchant, error)
 	Update(merchant *models.Merchant) error
+	CountAll() (int64, error)
 }
 
 type merchantRepository struct {
@@ -51,4 +52,16 @@ func (r *merchantRepository) GetByUserID(userID uint) (*models.Merchant, error) 
 
 func (r *merchantRepository) Update(merchant *models.Merchant) error {
 	return r.db.Save(merchant).Error
+}
+
+func (r *merchantRepository) CountAll() (int64, error) {
+	var count int64
+
+	if err := r.db.
+		Model(&models.Merchant{}).
+		Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

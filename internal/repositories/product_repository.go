@@ -25,6 +25,7 @@ type ProductRepository interface {
 	DecrementStock(id uint, qty int) error
 	CountByMerchant(merchantID uint) (int64, error)
 	CountLowStockByMerchant(merchantID uint, threshold int) (int64, error)
+	CountAll() (int64, error)
 }
 
 type productRepository struct {
@@ -225,6 +226,18 @@ func (r *productRepository) CountLowStockByMerchant(merchantID uint, threshold i
 	if err := r.db.
 		Model(&models.Product{}).
 		Where("merchant_id = ? AND stock <= ?", merchantID, threshold).
+		Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *productRepository) CountAll() (int64, error) {
+	var count int64
+
+	if err := r.db.
+		Model(&models.Product{}).
 		Count(&count).Error; err != nil {
 		return 0, err
 	}

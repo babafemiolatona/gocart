@@ -8,6 +8,7 @@ import (
 
 type UserRepository interface {
 	GetByID(id uint) (*models.User, error)
+	CountAll() (int64, error)
 }
 
 type userRepository struct {
@@ -28,4 +29,16 @@ func (r *userRepository) GetByID(id uint) (*models.User, error) {
 	}
 
 	return user, nil
+}
+
+func (r *userRepository) CountAll() (int64, error) {
+	var count int64
+
+	if err := r.db.
+		Model(&models.User{}).
+		Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

@@ -153,6 +153,8 @@ func (s *stubMerchantRepo) GetByUserID(userID uint) (*models.Merchant, error) {
 
 func (s *stubMerchantRepo) Update(merchant *models.Merchant) error { return nil }
 
+func (s *stubMerchantRepo) CountAll() (int64, error) { return 0, nil }
+
 func claimsWith(subject string, role models.Role) *services.CustomClaims {
 	return &services.CustomClaims{
 		Role:             role,

@@ -16,6 +16,10 @@ type AuthService interface {
 	ChangePassword(userID uint, req *dto.ChangePasswordRequest) error
 }
 
+type AdminService interface {
+	GetDashboard() (*dto.AdminDashboardResponse, error)
+}
+
 type CartService interface {
 	GetCartResponse(userID uint) (*dto.CartResponse, error)
 	AddToCart(userID uint, req *dto.AddToCartRequest) (*dto.CartResponse, error)

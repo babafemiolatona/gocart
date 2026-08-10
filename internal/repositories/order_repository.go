@@ -21,6 +21,10 @@ type OrderRepository interface {
 	CountByMerchantAndStatus(merchantID uint, status models.OrderStatus) (int64, error)
 	SumRevenueByMerchant(merchantID uint) (int64, error)
 	GetRecentOrdersByMerchant(merchantID uint, limit int) ([]models.Order, error)
+
+	CountAll() (int64, error)
+	SumRevenueAll() (int64, error)
+	CountsByStatus() (map[models.OrderStatus]int64, error)
 }
 
 type orderRepository struct {
@@ -285,4 +289,54 @@ func (r *orderRepository) GetRecentOrdersByMerchant(merchantID uint, limit int) 
 	}
 
 	return orders, nil
+}
+
+func (r *orderRepository) CountAll() (int64, error) {
+	var count int64
+
+	if err := r.db.
+		Model(&models.Order{}).
+		Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *orderRepository) SumRevenueAll() (int64, error) {
+	var total int64
+
+	err := r.db.
+		Model(&models.Order{}).
+		Select("COALESCE(SUM(total), 0)").
+		Where("status = ?", models.OrderStatusDelivered).
+		Scan(&total).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	return total, nil
+}
+
+func (r *orderRepository) CountsByStatus() (map[models.OrderStatus]int64, error) {
+	var rows []struct {
+		Status models.OrderStatus
+		Count  int64
+	}
+
+	if err := r.db.
+		Model(&models.Order{}).
+		Select("status, COUNT(*) as count").
+		Group("status").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	counts := make(map[models.OrderStatus]int64, len(rows))
+	for _, row := range rows {
+		counts[row.Status] = row.Count
+	}
+
+	return counts, nil
 }

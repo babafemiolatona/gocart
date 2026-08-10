@@ -170,6 +170,7 @@ type stubMerchantRepo struct {
 	getByIDFn   func(id uint) (*models.Merchant, error)
 	getByUserFn func(userID uint) (*models.Merchant, error)
 	updateFn    func(m *models.Merchant) error
+	countAllFn  func() (int64, error)
 }
 
 func (s *stubMerchantRepo) Create(m *models.Merchant) error {
@@ -200,6 +201,13 @@ func (s *stubMerchantRepo) Update(m *models.Merchant) error {
 	return nil
 }
 
+func (s *stubMerchantRepo) CountAll() (int64, error) {
+	if s.countAllFn != nil {
+		return s.countAllFn()
+	}
+	return 0, nil
+}
+
 // stubOrderRepo implements repositories.OrderRepository for tests.
 type stubOrderRepo struct {
 	createFn          func(order *models.Order) error
@@ -214,6 +222,9 @@ type stubOrderRepo struct {
 	countByStatusFn   func(merchantID uint, status models.OrderStatus) (int64, error)
 	sumRevenueFn      func(merchantID uint) (int64, error)
 	getRecentFn       func(merchantID uint, limit int) ([]models.Order, error)
+	countAllFn        func() (int64, error)
+	sumRevenueAllFn   func() (int64, error)
+	countsByStatusFn  func() (map[models.OrderStatus]int64, error)
 }
 
 func (s *stubOrderRepo) CreateOrder(o *models.Order) error {
@@ -300,6 +311,27 @@ func (s *stubOrderRepo) GetRecentOrdersByMerchant(merchantID uint, limit int) ([
 	return nil, nil
 }
 
+func (s *stubOrderRepo) CountAll() (int64, error) {
+	if s.countAllFn != nil {
+		return s.countAllFn()
+	}
+	return 0, nil
+}
+
+func (s *stubOrderRepo) SumRevenueAll() (int64, error) {
+	if s.sumRevenueAllFn != nil {
+		return s.sumRevenueAllFn()
+	}
+	return 0, nil
+}
+
+func (s *stubOrderRepo) CountsByStatus() (map[models.OrderStatus]int64, error) {
+	if s.countsByStatusFn != nil {
+		return s.countsByStatusFn()
+	}
+	return nil, nil
+}
+
 // stubPaymentRepo implements repositories.PaymentRepository for tests.
 type stubPaymentRepo struct {
 	createFn         func(p *models.Payment) error
@@ -347,6 +379,7 @@ type stubProductRepo struct {
 	decrementFn       func(id uint, qty int) error
 	countByMerchantFn func(merchantID uint) (int64, error)
 	countLowStockFn   func(merchantID uint, threshold int) (int64, error)
+	countAllFn        func() (int64, error)
 }
 
 func (s *stubProductRepo) Create(p *models.Product) error {
@@ -412,6 +445,13 @@ func (s *stubProductRepo) CountLowStockByMerchant(merchantID uint, threshold int
 	return 0, nil
 }
 
+func (s *stubProductRepo) CountAll() (int64, error) {
+	if s.countAllFn != nil {
+		return s.countAllFn()
+	}
+	return 0, nil
+}
+
 // stubProductImageRepo implements repositories.ProductImageRepository for tests.
 type stubProductImageRepo struct {
 	createManyFn func(images []models.ProductImage) error
@@ -426,7 +466,8 @@ func (s *stubProductImageRepo) CreateMany(images []models.ProductImage) error {
 
 // stubUserRepo implements repositories.UserRepository for tests.
 type stubUserRepo struct {
-	getByIDFn func(id uint) (*models.User, error)
+	getByIDFn  func(id uint) (*models.User, error)
+	countAllFn func() (int64, error)
 }
 
 func (s *stubUserRepo) GetByID(id uint) (*models.User, error) {
@@ -434,6 +475,13 @@ func (s *stubUserRepo) GetByID(id uint) (*models.User, error) {
 		return s.getByIDFn(id)
 	}
 	return nil, repositories.ErrRecordNotFound
+}
+
+func (s *stubUserRepo) CountAll() (int64, error) {
+	if s.countAllFn != nil {
+		return s.countAllFn()
+	}
+	return 0, nil
 }
 
 // stubStorage implements storage.Storage for tests.
