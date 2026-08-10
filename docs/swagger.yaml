@@ -81,6 +81,20 @@ definitions:
       updated_at:
         type: string
     type: object
+  dto.ChangePasswordRequest:
+    properties:
+      confirm_password:
+        type: string
+      current_password:
+        type: string
+      new_password:
+        minLength: 6
+        type: string
+    required:
+    - confirm_password
+    - current_password
+    - new_password
+    type: object
   dto.CheckoutRequest:
     properties:
       idempotency_key:
@@ -1789,6 +1803,45 @@ paths:
       summary: Get current user
       tags:
       - Users
+  /api/v1/users/me/password:
+    put:
+      consumes:
+      - application/json
+      description: Change the authenticated user's password after verifying the current
+        one
+      parameters:
+      - description: Change password request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - Authentication
   /api/v1/webhooks/payments:
     post:
       consumes:
