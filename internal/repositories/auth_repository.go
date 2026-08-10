@@ -12,6 +12,7 @@ type AuthRepository interface {
 	GetByEmailOrUsername(identifier string) (*models.User, error)
 	GetByID(id uint) (*models.User, error)
 	ExistsByEmail(email string) (bool, error)
+	UpdatePassword(id uint, hashedPassword string) error
 }
 
 type authRepository struct {
@@ -76,4 +77,21 @@ func (r *authRepository) GetByID(id uint) (*models.User, error) {
 	}
 
 	return user, nil
+}
+
+func (r *authRepository) UpdatePassword(id uint, hashedPassword string) error {
+	result := r.db.
+		Model(&models.User{}).
+		Where("id = ?", id).
+		Update("password", hashedPassword)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return nil
 }

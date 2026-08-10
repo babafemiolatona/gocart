@@ -233,6 +233,7 @@ Change the password before any production use.
 All routes below require `Authorization: Bearer <token>`.
 
 - `GET /api/v1/users/me`
+- `PUT /api/v1/users/me/password` — change password (requires `current_password`, `new_password`, `confirm_password`)
 - `GET /api/v1/cart`
 - `POST /api/v1/cart/items`
 - `PUT /api/v1/cart/items/:itemID`

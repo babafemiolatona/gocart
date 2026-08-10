@@ -13,6 +13,7 @@ import (
 type AuthService interface {
 	Register(req *dto.RegisterRequest) (*dto.UserResponse, error)
 	Login(req *dto.LoginRequest) (*dto.AuthResponse, error)
+	ChangePassword(userID uint, req *dto.ChangePasswordRequest) error
 }
 
 type CartService interface {

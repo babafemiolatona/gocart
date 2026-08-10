@@ -23,6 +23,7 @@ const (
 	CodeCheckUser          = "check_user_failed"
 	CodeHashPassword       = "hash_password_failed"
 	CodeGenerateToken      = "generate_token_failed"
+	CodeUpdatePassword     = "update_password_failed"
 
 	// Category
 	CodeCategoryExists   = "category_exists"

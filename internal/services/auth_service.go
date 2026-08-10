@@ -137,6 +137,55 @@ func (s *AuthService) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 	}, nil
 }
 
+func (s *AuthService) ChangePassword(userID uint, req *dto.ChangePasswordRequest) error {
+
+	if err := req.Validate(); err != nil {
+		return apperrors.New(
+			http.StatusBadRequest,
+			apperrors.CodeValidationError,
+			err.Error(),
+			err,
+		)
+	}
+
+	user, err := s.authRepo.GetByID(userID)
+	if err != nil {
+		return repoErr(
+			err,
+			apperrors.CodeFetchUser, "failed to fetch user",
+			apperrors.CodeUserNotFound, "user not found",
+		)
+	}
+
+	if !user.VerifyPassword(req.CurrentPassword) {
+		return apperrors.New(
+			http.StatusUnauthorized,
+			apperrors.CodeInvalidCredentials,
+			"current password is incorrect",
+			nil,
+		)
+	}
+
+	if err := user.HashPassword(req.NewPassword); err != nil {
+		return apperrors.New(
+			http.StatusInternalServerError,
+			apperrors.CodeHashPassword,
+			"failed to hash password",
+			err,
+		)
+	}
+
+	if err := s.authRepo.UpdatePassword(user.ID, user.Password); err != nil {
+		return repoErr(
+			err,
+			apperrors.CodeUpdatePassword, "failed to update password",
+			apperrors.CodeUserNotFound, "user not found",
+		)
+	}
+
+	return nil
+}
+
 type CustomClaims struct {
 	Role models.Role `json:"role"`
 	jwt.RegisteredClaims

@@ -152,6 +152,7 @@ func SetupRoutes(
 			users := protected.Group("/users")
 			{
 				users.GET("/me", userHandler.GetMe)
+				users.PUT("/me/password", authHandler.ChangePassword)
 			}
 
 			cart := protected.Group("/cart")

@@ -36,6 +36,28 @@ type UserResponse struct {
 	CreatedAt time.Time   `json:"created_at"`
 }
 
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,min=6"`
+	ConfirmPassword string `json:"confirm_password" binding:"required"`
+}
+
+func (r *ChangePasswordRequest) Validate() error {
+	if r.CurrentPassword == "" {
+		return errors.New("current password is required")
+	}
+	if r.NewPassword == "" || len(r.NewPassword) < 6 {
+		return errors.New("new password must be at least 6 characters")
+	}
+	if r.NewPassword != r.ConfirmPassword {
+		return errors.New("passwords do not match")
+	}
+	if r.CurrentPassword == r.NewPassword {
+		return errors.New("new password must be different from the current password")
+	}
+	return nil
+}
+
 func ValidateEmail(email string) error {
 	pattern := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
 	matched, _ := regexp.MatchString(pattern, email)
